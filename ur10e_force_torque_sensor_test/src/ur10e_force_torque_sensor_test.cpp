@@ -10,16 +10,24 @@
 
 #include <ur_rtde/rtde_receive_interface.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <signal.h>
+#include <cstdlib>
+#include <thread>
+#include <time.h>
+
 
 using namespace ur_rtde;
-
 volatile sig_atomic_t stop;
-
 void inthand(int signum) {
   stop = 1;
 }
+
+//void *PrintHello(void *threadid) {
+//  long tid;
+//  tid = (long)threadid;
+//  cout << "Hello World! Thread ID, " << tid << endl;
+//  pthread_exit(NULL);
+//}
 
 //void controlFunction(const ros::TimerEvent&)
 //{
@@ -84,6 +92,79 @@ void inthand(int signum) {
 //
 //}
 
+timer_t firstTimerID;
+
+static void timerHandler( int sig, siginfo_t *si, void *uc )
+{
+  timer_t *tidp;
+  tidp = (void**)(si->si_value.sival_ptr);
+
+  if(time_count < sampling_time)
+  {
+    time_count += control_time;
+    return;
+  }
+
+  //ft_sensor->signal_processing(raw_force_torque_data);
+
+  //collision_detection->collision_detection_processing(raw_force_torque_data - ft_sensor->ft_offset_data);
+
+  tool_estimation->estimation_processing(ft_sensor->ft_filtered_data);
+
+  //  ft_sensor->ft_filtered_data(0,0) = tool_estimation ->contacted_force(0,0);
+  //  ft_sensor->ft_filtered_data(1,0) = tool_estimation ->contacted_force(1,0);
+  //  ft_sensor->ft_filtered_data(2,0) = tool_estimation ->contacted_force(2,0);
+}
+
+
+static int makeTimer( timer_t *timerID, int expireMS, int intervalMS )
+
+{
+
+  struct sigevent te;
+
+  struct itimerspec its;
+
+  struct sigaction sa;
+
+  int sigNo = SIGRTMIN;
+
+  /* Set up signal handler. */
+
+  sa.sa_flags = SA_SIGINFO;
+
+  sa.sa_sigaction = timerHandler;
+
+  sigemptyset(&sa.sa_mask);
+
+  if (sigaction(sigNo, &sa, NULL) == -1) {
+
+    perror("sigaction");
+
+  }
+  /* Set and enable alarm */
+
+  te.sigev_notify = SIGEV_SIGNAL;
+
+  te.sigev_signo = sigNo;
+
+  te.sigev_value.sival_ptr = timerID;
+
+  timer_create(CLOCK_REALTIME, &te, timerID);
+
+  its.it_interval.tv_sec = 0;
+
+  its.it_interval.tv_nsec = intervalMS * 1000000;
+
+  its.it_value.tv_sec = 0;
+
+  its.it_value.tv_nsec = expireMS * 1000000;
+
+  timer_settime(*timerID, 0, &its, NULL);
+
+  return 1;
+}
+
 int main (int argc, char **argv)
 {
   printf("Force Torque Sensor Test Node Start \n");
@@ -96,6 +177,8 @@ int main (int argc, char **argv)
   ur10e_kinematics = new Kinematics;
   collision_detection = new CollisionDetection;
 
+
+  // ft sensor variables init
   ft_sensor->control_time     = control_time;
   ft_sensor->lpf_force_cutoff_frequency  = 3;
   ft_sensor->lpf_torque_cutoff_frequency = 3;
@@ -105,9 +188,10 @@ int main (int argc, char **argv)
 
   ft_sensor->initialize();
 
-  tool_estimation ->initialize();
+  //tool_estimation ->initialize();
 
 
+  //collision detection variables init
   collision_detection->fx_k = 1;
   collision_detection->fx_high_limit = 12;
   collision_detection->fx_low_limit = -22;
@@ -121,11 +205,9 @@ int main (int argc, char **argv)
   collision_detection->fz_low_limit = 0;
 
 
-
+  // offset variables init
   offset_check = true;
   time_count =0.0;
-
-
 
   //  RTDEReceiveInterface rtde_receive("192.168.1.129");
   //  std::vector<double> joint_positions        = rtde_receive.getActualQ();
@@ -141,23 +223,26 @@ int main (int argc, char **argv)
   //  joint_positions        = rtde_receive.getActualQ();
 
   // ur10e_kinematics->joint_positions = joint_positions;
+  //
+  //  for(int num = 0;num < 6; num ++)
+  //  {
+  //    //robot_raw_force_torque_data_msg.data.push_back(force_data[num]);
+  //    //raw_force_torque_data(num,0) = force_data[num];
+  //  }
 
-  for(int num = 0;num < 6; num ++)
-  {
-    //robot_raw_force_torque_data_msg.data.push_back(force_data[num]);
-    //raw_force_torque_data(num,0) = force_data[num];
-  }
 
+  makeTimer(&firstTimerID, 2, 2); //2ms
   signal(SIGINT, inthand);
 
   while (!stop)
   {
     usleep(100);
-    printf("loop\n");
+    //printf("loop\n");
 
   }
 
 
+  timer_delete(&firstTimerID);
   printf("exiting safely\n");
   system("pause");
 
@@ -191,8 +276,6 @@ int main (int argc, char **argv)
   //      cout << tool_pose_data[0] << "\n\n";
   //      cout << tool_pose_data[1] << "\n\n";
   //      cout << tool_pose_data[2] << "\n\n";
-
-
 
   cout << "complete" << "\n\n";
 

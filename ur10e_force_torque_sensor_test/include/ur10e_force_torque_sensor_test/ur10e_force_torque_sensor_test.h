@@ -16,6 +16,7 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <stdio.h>
 
 
 
@@ -32,8 +33,6 @@ double sampling_time;
 
 bool offset_check;
 double  time_count;
-
-
 
 
 #endif /* SDU_UR10E_POSE_ESTIMATION_UR10E_FORCE_TORQUE_SENSOR_TEST_INCLUDE_UR10E_FORCE_TORQUE_SENSOR_TEST_UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */

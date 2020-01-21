@@ -17,6 +17,8 @@ iostream
 -
 sstream
 -
+stdio.h
+-
 
 /home/yik/sdu_ws/SDU-UR10E-Estimation/ur10e_force_torque_sensor_test/src/ur10e_force_torque_sensor_test.cpp
 ur10e_force_torque_sensor/ur10e_force_torque_sensor.h
@@ -27,9 +29,13 @@ ur_rtde/rtde_receive_interface.h
 -
 unistd.h
 -
-stdio.h
--
 signal.h
+-
+cstdlib
+-
+thread
+-
+time.h
 -
 
 /usr/include/eigen3/Eigen/Cholesky

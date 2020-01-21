@@ -20,7 +20,7 @@ set( SOURCE_FILES
 )
 
 add_executable(ur10e_force_torque_sensor_test ${SOURCE_FILES})
-target_link_libraries(ur10e_force_torque_sensor_test ur_rtde::rtde ur10e_force_torque_sensor sdu_math sensor_filter)
+target_link_libraries(ur10e_force_torque_sensor_test ur_rtde::rtde ur10e_force_torque_sensor sdu_math sensor_filter rt)
 
  
  

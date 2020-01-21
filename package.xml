@@ -49,17 +49,19 @@
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
 
+  <build_depend>time</build_depend>
   <build_depend>ur_rtde</build_depend>
   <build_depend>ur10e_force_torque_sensor</build_depend>
   <build_depend>sensor_filter</build_depend>
   <build_depend>eigen</build_depend>
   
-  
+  <build_export_depend>time</build_export_depend>
   <build_export_depend>ur_rtde</build_export_depend>
   <build_export_depend>ur10e_force_torque_sensor</build_export_depend>
   <build_export_depend>sensor_filter</build_export_depend>
   <build_export_depend>eigen</build_export_depend>
 
+  <exec_depend>>time</exec_depend>
   <exec_depend>>ur_rtde</exec_depend>
   <exec_depend>>ur10e_force_torque_sensor</exec_depend>
   <exec_depend>sensor_filter</exec_depend>
