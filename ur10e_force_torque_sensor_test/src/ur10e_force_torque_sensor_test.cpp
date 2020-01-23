@@ -178,19 +178,12 @@ int main (int argc, char **argv)
   collision_detection = new CollisionDetection;
 
 
-  // ft sensor variables init
-  ft_sensor->control_time     = control_time;
-  ft_sensor->lpf_force_cutoff_frequency  = 3;
-  ft_sensor->lpf_torque_cutoff_frequency = 3;
-
-  ft_sensor->hpf_force_cutoff_frequency  = 10;
-  ft_sensor->hpf_torque_cutoff_frequency = 10;
-
+  std::string init_data_path;
+  init_data_path = "../config/init_data.yaml";
+  ft_sensor->parse_init_data(init_data_path);
   ft_sensor->initialize();
 
   //tool_estimation ->initialize();
-
-
   //collision detection variables init
   collision_detection->fx_k = 1;
   collision_detection->fx_high_limit = 12;
@@ -203,7 +196,6 @@ int main (int argc, char **argv)
   collision_detection->fz_k = 0;
   collision_detection->fz_high_limit = 0;
   collision_detection->fz_low_limit = 0;
-
 
   // offset variables init
   offset_check = true;
@@ -231,7 +223,8 @@ int main (int argc, char **argv)
   //  }
 
 
-  makeTimer(&firstTimerID, 2, 2); //2ms
+
+  //makeTimer(&firstTimerID, 2, 2); //2ms
   signal(SIGINT, inthand);
 
   while (!stop)

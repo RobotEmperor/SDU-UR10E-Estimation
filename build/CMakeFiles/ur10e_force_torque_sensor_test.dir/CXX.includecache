@@ -1121,21 +1121,7 @@ sdu_math/statics_math.h
 /usr/local/include/ur10e_force_torque_sensor/sdu_math/statics_math.h
 Eigen/Dense
 -
-std_msgs/Int16.h
--
-std_msgs/Float64.h
--
-std_msgs/String.h
--
-geometry_msgs/Pose.h
--
-boost/thread.hpp
--
-Eigen/Dense
--
 yaml-cpp/yaml.h
--
-fstream
 -
 
 /usr/local/include/ur_rtde/dashboard_client.h

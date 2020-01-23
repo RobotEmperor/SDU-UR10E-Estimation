@@ -6,6 +6,7 @@ SET ( PROJECT_VERSION_MINOR 1 )
 
 SET ( CMAKE_C_COMPILER "gcc" )
 
+
 INCLUDE_DIRECTORIES (ur10e_force_torque_sensor_test/include)
 
 add_compile_options(-std=c++11)
@@ -19,8 +20,7 @@ set( SOURCE_FILES
   ur10e_force_torque_sensor_test/src/ur10e_force_torque_sensor_test.cpp
 )
 
+link_directories(/usr/local/lib)
 add_executable(ur10e_force_torque_sensor_test ${SOURCE_FILES})
-target_link_libraries(ur10e_force_torque_sensor_test ur_rtde::rtde ur10e_force_torque_sensor sdu_math sensor_filter rt)
+target_link_libraries(ur10e_force_torque_sensor_test ur_rtde::rtde ur10e_force_torque_sensor sdu_math rt)
 
- 
- 
