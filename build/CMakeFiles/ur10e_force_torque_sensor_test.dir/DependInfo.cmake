@@ -4,16 +4,15 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/yik/sdu_ws/SDU-UR10E-Estimation/ur10e_force_torque_sensor_test/src/ur10e_force_torque_sensor_test.cpp" "/home/yik/sdu_ws/SDU-UR10E-Estimation/build/CMakeFiles/ur10e_force_torque_sensor_test.dir/ur10e_force_torque_sensor_test/src/ur10e_force_torque_sensor_test.cpp.o"
+  "/home/wrs/sdu_ws/SDU-UR10E-Estimation/ur10e_force_torque_sensor_test/src/ur10e_force_torque_sensor_test.cpp" "/home/wrs/sdu_ws/SDU-UR10E-Estimation/build/CMakeFiles/ur10e_force_torque_sensor_test.dir/ur10e_force_torque_sensor_test/src/ur10e_force_torque_sensor_test.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../ur10e_force_torque_sensor_test/include"
-  "/opt/ros/melodic/include"
+  "/opt/ros/kinetic/include"
   "/usr/include/eigen3"
-  "/usr/local/include"
   )
 
 # Targets to which this target links.
