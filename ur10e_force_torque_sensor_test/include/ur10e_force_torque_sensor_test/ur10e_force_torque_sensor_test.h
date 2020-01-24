@@ -18,6 +18,10 @@
 #include <sstream>
 #include <stdio.h>
 
+//ros message system
+#include "ros/ros.h"
+#include "std_msgs/Float64MultiArray.h"
+
 
 
 using namespace std;
@@ -25,7 +29,6 @@ using namespace std;
 Ur10eFTsensor *ft_sensor;
 PoseEstimation *tool_estimation;
 Kinematics *ur10e_kinematics;
-CollisionDetection *collision_detection;
 
 double control_time;
 double sampling_time;
@@ -33,6 +36,11 @@ double sampling_time;
 
 bool offset_check;
 double  time_count;
+
+Eigen::MatrixXd raw_force_torque_data;
+
+ros::Publisher filtered_force_torque_data_pub;
+std_msgs::Float64MultiArray filtered_force_torque_data_msg;
 
 
 #endif /* SDU_UR10E_POSE_ESTIMATION_UR10E_FORCE_TORQUE_SENSOR_TEST_INCLUDE_UR10E_FORCE_TORQUE_SENSOR_TEST_UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */

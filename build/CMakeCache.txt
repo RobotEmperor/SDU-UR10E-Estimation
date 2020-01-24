@@ -190,6 +190,12 @@ SDU-UR10E-Pose-Estimation_BINARY_DIR:STATIC=/home/yik/sdu_ws/SDU-UR10E-Estimatio
 //Value Computed by CMake
 SDU-UR10E-Pose-Estimation_SOURCE_DIR:STATIC=/home/yik/sdu_ws/SDU-UR10E-Estimation
 
+//The directory containing a CMake configuration file for catkin.
+catkin_DIR:PATH=catkin_DIR-NOTFOUND
+
+//The directory containing a CMake configuration file for roscpp.
+roscpp_DIR:PATH=roscpp_DIR-NOTFOUND
+
 //The directory containing a CMake configuration file for ur10e_force_torque_sensor.
 ur10e_force_torque_sensor_DIR:PATH=ur10e_force_torque_sensor_DIR-NOTFOUND
 

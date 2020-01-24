@@ -6,5 +6,5 @@ CXX_FLAGS =   -std=c++11
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/yik/sdu_ws/SDU-UR10E-Estimation/ur10e_force_torque_sensor_test/include -I/usr/include/eigen3 -isystem /usr/local/include 
+CXX_INCLUDES = -I/home/yik/sdu_ws/SDU-UR10E-Estimation/ur10e_force_torque_sensor_test/include -I/opt/ros/melodic/include -I/usr/include/eigen3 -isystem /usr/local/include 
 

@@ -5,12 +5,12 @@ sampling_time : 2.0
 control_time : 0.002 #2ms, 500Hz
 
 #low pass filter
-lpf_force_cutoff_frequency  : 1
-lpf_torque_cutoff_frequency : 2
+lpf_force_cutoff_frequency  : 0
+lpf_torque_cutoff_frequency : 0
 
 #high pass filter
-hpf_force_cutoff_frequency  : 3
-hpf_torque_cutoff_frequency : 4
+hpf_force_cutoff_frequency  : 0
+hpf_torque_cutoff_frequency : 0
 
 
 #ft sensor kalman filter modeling 
@@ -27,11 +27,11 @@ fx_low_limit : -22
 
 fy_k : 0
 fy_high_limit : 0
-fy_low_limit : 0
+fy_low_limit :  0
 
 fz_k : 0
 fz_high_limit : 0
-fz_low_limit : 0
+fz_low_limit :  0
 
 ## torque 
 tx_k : 0
@@ -40,7 +40,7 @@ tx_low_limit :  0
 
 ty_k : 0
 ty_high_limit : 0
-ty_low_limit : 0
+ty_low_limit :  0
 
 tz_k : 0
 tz_high_limit : 0

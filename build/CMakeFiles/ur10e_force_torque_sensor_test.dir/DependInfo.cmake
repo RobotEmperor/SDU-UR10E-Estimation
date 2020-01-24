@@ -11,6 +11,7 @@ set(CMAKE_CXX_COMPILER_ID "GNU")
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../ur10e_force_torque_sensor_test/include"
+  "/opt/ros/melodic/include"
   "/usr/include/eigen3"
   "/usr/local/include"
   )
