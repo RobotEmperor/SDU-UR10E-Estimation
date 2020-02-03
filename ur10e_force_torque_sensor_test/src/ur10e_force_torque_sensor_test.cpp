@@ -104,9 +104,11 @@ int main (int argc, char **argv)
 
   for(int num = 0;num < 6; num ++)
   {
-    // ft_sensor->ft_offset_data(num,0) = force_data[num];
-    ft_sensor->ft_offset_data(num,0) = raw_force_torque_data(num,0);
+     //ft_sensor->ft_offset_data(num,0) = force_data[num];
+     ft_sensor->ft_offset_data(num,0) = raw_force_torque_data(num,0);
   }
+
+  cout <<  ft_sensor->ft_offset_data << "\n\n";
 
 
 
@@ -123,26 +125,26 @@ int main (int argc, char **argv)
           raw_force_torque_data(num,0) = force_data[num];
         }
 
-        //offset initialize
-        if(time_count < sampling_time)
-        {
-          offset_check = true;
-          ft_sensor->offset_init(raw_force_torque_data, offset_check);
-          //tool_estimation->offset_init(tool_estimation -> tool_linear_acc_data, offset_check);
-        }
-        if(time_count > sampling_time && offset_check == true)
-        {
-          offset_check = false;
-          ft_sensor->offset_init(raw_force_torque_data, offset_check);
-          //tool_estimation->offset_init(tool_estimation -> tool_linear_acc_data, offset_check);
-          //printf("loop\n");
-        }
-        force_data     = rtde_receive.getActualTCPForce();
-
-        for(int num = 0;num < 6; num ++)
-        {
-          raw_force_torque_data(num,0) = force_data[num];
-        }
+//        //offset initialize
+//        if(time_count < sampling_time)
+//        {
+//          offset_check = true;
+//          ft_sensor->offset_init(raw_force_torque_data, offset_check);
+//          //tool_estimation->offset_init(tool_estimation -> tool_linear_acc_data, offset_check);
+//        }
+//        if(time_count > sampling_time && offset_check == true)
+//        {
+//          offset_check = false;
+//          ft_sensor->offset_init(raw_force_torque_data, offset_check);
+//          //tool_estimation->offset_init(tool_estimation -> tool_linear_acc_data, offset_check);
+//          //printf("loop\n");
+//        }
+//        force_data     = rtde_receive.getActualTCPForce();
+//
+//        for(int num = 0;num < 6; num ++)
+//        {
+//          raw_force_torque_data(num,0) = force_data[num];
+//        }
 
 
     ft_sensor->signal_processing(raw_force_torque_data);
@@ -185,9 +187,17 @@ int main (int argc, char **argv)
 
 
   usleep(10000);
+  cout << "complete" << "\n\n";
+
+  delete ft_sensor;
+  delete tool_estimation;
+  delete ur10e_kinematics;
+
   // timer_delete(&firstTimerID);
   printf("exiting safely\n");
   system("pause");
+
+  return 0;
 
 
 
@@ -220,10 +230,4 @@ int main (int argc, char **argv)
   //      cout << tool_pose_data[1] << "\n\n";
   //      cout << tool_pose_data[2] << "\n\n";
 
-  cout << "complete" << "\n\n";
-
-  delete ft_sensor;
-  delete tool_estimation;
-  delete ur10e_kinematics;
-  return 0;
 }
