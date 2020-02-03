@@ -42,5 +42,7 @@ Eigen::MatrixXd raw_force_torque_data;
 ros::Publisher filtered_force_torque_data_pub;
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
 
+void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg);
+
 
 #endif /* SDU_UR10E_POSE_ESTIMATION_UR10E_FORCE_TORQUE_SENSOR_TEST_INCLUDE_UR10E_FORCE_TORQUE_SENSOR_TEST_UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */

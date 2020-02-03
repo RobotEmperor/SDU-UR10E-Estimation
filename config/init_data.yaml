@@ -5,8 +5,8 @@ sampling_time : 2.0
 control_time : 0.002 #2ms, 500Hz
 
 #low pass filter
-lpf_force_cutoff_frequency  : 0
-lpf_torque_cutoff_frequency : 0
+lpf_force_cutoff_frequency  : 10
+lpf_torque_cutoff_frequency : 10
 
 #high pass filter
 hpf_force_cutoff_frequency  : 0
@@ -15,8 +15,12 @@ hpf_torque_cutoff_frequency : 0
 
 #ft sensor kalman filter modeling 
 
-gain_Q : 1
-gain_R : 500
+gain_Q : 0.001
+gain_R_low_frequency : 7    # 7
+gain_R_high_frequency : 0.5 # 0.5
+
+limit_low_rate_of_change : -1
+limit_high_rate_of_change : 1
 
 
 #ft collision detection parameter

@@ -13,7 +13,7 @@ find_package(Eigen3 REQUIRED)
 
 
 INCLUDE_DIRECTORIES (${CMAKE_SOURCE_DIR}/ur10e_force_torque_sensor_test/include
-                     /opt/ros/kinetic/include
+                     /opt/ros/melodic/include
                      ${EIGEN3_INCLUDE_DIR}
                      )
 
@@ -23,7 +23,7 @@ set( SOURCE_FILES
 )
 
 link_directories(/usr/local/lib
-                 /opt/ros/kinetic/lib)
+                 /opt/ros/melodic/lib)
 add_executable(ur10e_force_torque_sensor_test ${SOURCE_FILES})
 target_link_libraries(ur10e_force_torque_sensor_test rtde ur10e_force_torque_sensor sdu_math rt roscpp rosconsole roscpp_serialization boost_system)
 
