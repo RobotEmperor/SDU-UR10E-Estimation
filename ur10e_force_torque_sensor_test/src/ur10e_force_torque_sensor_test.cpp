@@ -90,7 +90,7 @@ int main (int argc, char **argv)
     std::vector<double> force_data             = rtde_receive.getActualTCPForce();
     std::vector<double> tool_linear_acc_data   = rtde_receive.getActualToolAccelerometer();
     std::vector<double> tool_pose_data         = rtde_receive.getActualTCPPose();
-    std::vector<double> torque_data         = rtde_receive.getActualMomentum();
+    std::vector<double> torque_data         = rtde_receive.getTargetMoment();
 
 
 
@@ -115,7 +115,7 @@ int main (int argc, char **argv)
   {
     usleep(2000); // 2ms
         force_data     = rtde_receive.getActualTCPForce();
-        torque_data         = rtde_receive.getActualMomentum();
+        torque_data         = rtde_receive.getTargetMoment();
         joint_positions        = rtde_receive.getActualQ();
         ur10e_kinematics->joint_positions = joint_positions;
 
@@ -151,7 +151,9 @@ int main (int argc, char **argv)
     ft_sensor->collision_detection_processing(ft_sensor->ft_filtered_data);
 
     ur10e_kinematics->calculate_jacobian(ur10e_kinematics->joint_positions);
-    //ur10e_kinematics->calculate_end_effector_force(torque_data);
+
+    cout << (ur10e_kinematics->jacobian_force_matrix.transpose()).determinant() << "\n\n";
+    ur10e_kinematics->calculate_end_effector_force(torque_data);
     //
     //
 
@@ -170,12 +172,12 @@ int main (int argc, char **argv)
     filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data(4,0));
     filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data(5,0));
 
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(0,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(1,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(2,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(3,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(4,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(5,0));
+    filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->force_matrix(0,0));
+    filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->force_matrix(1,0));
+    filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->force_matrix(2,0));
+    filtered_force_torque_data_msg.data.push_back(torque_data[0]);
+    filtered_force_torque_data_msg.data.push_back(torque_data[1]);
+    filtered_force_torque_data_msg.data.push_back(torque_data[2]);
 
     filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
     filtered_force_torque_data_msg.data.clear();
