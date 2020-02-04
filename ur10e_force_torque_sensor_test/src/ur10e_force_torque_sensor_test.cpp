@@ -90,17 +90,13 @@ int main (int argc, char **argv)
     std::vector<double> force_data             = rtde_receive.getActualTCPForce();
     std::vector<double> tool_linear_acc_data   = rtde_receive.getActualToolAccelerometer();
     std::vector<double> tool_pose_data         = rtde_receive.getActualTCPPose();
+    std::vector<double> torque_data         = rtde_receive.getActualMomentum();
 
 
 
     tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
     tool_pose_data = rtde_receive.getActualTCPPose();
     force_data     = rtde_receive.getActualTCPForce();
-    joint_positions        = rtde_receive.getActualQ();
-
-
-
-    ur10e_kinematics->joint_positions = joint_positions;
 
   for(int num = 0;num < 6; num ++)
   {
@@ -119,6 +115,9 @@ int main (int argc, char **argv)
   {
     usleep(2000); // 2ms
         force_data     = rtde_receive.getActualTCPForce();
+        torque_data         = rtde_receive.getActualMomentum();
+        joint_positions        = rtde_receive.getActualQ();
+        ur10e_kinematics->joint_positions = joint_positions;
 
         for(int num = 0;num < 6; num ++)
         {
@@ -150,6 +149,9 @@ int main (int argc, char **argv)
     ft_sensor->signal_processing(raw_force_torque_data);
     //
     ft_sensor->collision_detection_processing(ft_sensor->ft_filtered_data);
+
+    ur10e_kinematics->calculate_jacobian(ur10e_kinematics->joint_positions);
+    //ur10e_kinematics->calculate_end_effector_force(torque_data);
     //
     //
 
