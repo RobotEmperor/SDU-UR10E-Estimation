@@ -98,7 +98,7 @@ int main (int argc, char **argv)
 
 
   // offset initialize function
-  for(int num = 0;num < 500; num ++)
+  for(int num = 0;num < 502; num ++)
   {
     force_data     = rtde_receive.getActualTCPForce();
     for(int var = 0; var < 6; var ++)
