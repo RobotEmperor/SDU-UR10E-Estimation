@@ -33,11 +33,8 @@ Kinematics *ur10e_kinematics;
 double control_time;
 double sampling_time;
 
-
-bool offset_check;
-double  time_count;
-
 Eigen::MatrixXd raw_force_torque_data;
+Eigen::MatrixXd tool_acc_data;
 
 ros::Publisher filtered_force_torque_data_pub;
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
