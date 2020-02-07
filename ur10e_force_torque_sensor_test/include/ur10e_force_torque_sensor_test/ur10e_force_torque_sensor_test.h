@@ -21,6 +21,7 @@
 //ros message system
 #include "ros/ros.h"
 #include "std_msgs/Float64MultiArray.h"
+#include "std_msgs/Bool.h"
 
 
 
@@ -29,6 +30,7 @@ using namespace std;
 Ur10eFTsensor *ft_sensor;
 PoseEstimation *tool_estimation;
 Kinematics *ur10e_kinematics;
+
 
 double control_time;
 double sampling_time;
@@ -40,6 +42,13 @@ ros::Publisher filtered_force_torque_data_pub;
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
 
 void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg);
+void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
+
+//for ros test
+
+double joint[6];
+bool zero_command;
+
 
 
 #endif /* SDU_UR10E_POSE_ESTIMATION_UR10E_FORCE_TORQUE_SENSOR_TEST_INCLUDE_UR10E_FORCE_TORQUE_SENSOR_TEST_UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */
