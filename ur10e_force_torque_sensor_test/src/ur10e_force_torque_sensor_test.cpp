@@ -85,13 +85,6 @@ int main (int argc, char **argv)
   tool_acc_data.resize(3,1);
   tool_acc_data.fill(0);
 
-  ft_sensor = new Ur10eFTsensor;
-  tool_estimation = new PoseEstimation;
-  ur10e_kinematics = new Kinematics;
-
-
-
-
   std::string init_data_path;
   init_data_path = "../config/init_data.yaml";
 
@@ -101,8 +94,6 @@ int main (int argc, char **argv)
   tool_estimation ->initialize();
 
   zero_command = false;
-
-
 
   //  RTDEReceiveInterface rtde_receive("192.168.1.129");
   //  std::vector<double> joint_positions        = rtde_receive.getActualQ();
@@ -300,10 +291,6 @@ int main (int argc, char **argv)
 
   usleep(10000);
   cout << "complete" << "\n\n";
-
-  delete ft_sensor;
-  delete tool_estimation;
-  delete ur10e_kinematics;
 
   printf("exiting safely\n");
   system("pause");

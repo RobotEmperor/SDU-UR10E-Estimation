@@ -27,9 +27,12 @@
 
 using namespace std;
 
-Ur10eFTsensor *ft_sensor;
-PoseEstimation *tool_estimation;
-Kinematics *ur10e_kinematics;
+//std::shared_ptr<Ur10eFTsensor> ft_sensor;
+//ur_10_e_ft_sensor = std::make_shared<Ur10eFTsensor>()
+
+std::shared_ptr<Ur10eFTsensor> ft_sensor;
+std::shared_ptr<PoseEstimation> tool_estimation;
+std::shared_ptr<Kinematics> ur10e_kinematics;
 
 
 double control_time;
