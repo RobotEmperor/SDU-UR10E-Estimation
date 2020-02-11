@@ -89,7 +89,14 @@ int main (int argc, char **argv)
   init_data_path = "../config/init_data.yaml";
 
 
-  ft_sensor->parse_init_data(init_data_path);
+
+  ft_sensor = std::make_shared<Ur10eFTsensor>();
+  tool_estimation = std::make_shared<PoseEstimation>();
+  ur10e_kinematics = std::make_shared<Kinematics>();
+
+
+
+  ft_sensor->control_time = 0;
   ft_sensor->initialize();
   tool_estimation ->initialize();
 
