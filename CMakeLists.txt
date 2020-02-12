@@ -36,4 +36,4 @@ link_directories(/usr/local/lib
 #                 /opt/ros/kinetic/lib)
 
 add_executable(ur10e_force_torque_sensor_test ${SOURCE_FILES})
-target_link_libraries(ur10e_force_torque_sensor_test rtde ur10e_force_torque_sensor sdu_math rt roscpp rosconsole roscpp_serialization boost_system)
+target_link_libraries(ur10e_force_torque_sensor_test rtde sdu_sensor sdu_math rt roscpp rosconsole roscpp_serialization boost_system)

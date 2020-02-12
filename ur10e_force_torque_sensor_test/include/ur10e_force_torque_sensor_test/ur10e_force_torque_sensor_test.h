@@ -5,8 +5,8 @@
  *      Author: yik
  */
 
-#ifndef SDU_UR10E_POSE_ESTIMATION_UR10E_FORCE_TORQUE_SENSOR_TEST_INCLUDE_UR10E_FORCE_TORQUE_SENSOR_TEST_UR10E_FORCE_TORQUE_SENSOR_TEST_H_
-#define SDU_UR10E_POSE_ESTIMATION_UR10E_FORCE_TORQUE_SENSOR_TEST_INCLUDE_UR10E_FORCE_TORQUE_SENSOR_TEST_UR10E_FORCE_TORQUE_SENSOR_TEST_H_
+#ifndef UR10E_FORCE_TORQUE_SENSOR_TEST_H_
+#define UR10E_FORCE_TORQUE_SENSOR_TEST_H_
 
 
 #include <Eigen/Dense>
@@ -18,20 +18,24 @@
 #include <sstream>
 #include <stdio.h>
 
+
+#include <ur_rtde/rtde_receive_interface.h>
+#include <unistd.h>
+#include <signal.h>
+#include <cstdlib>
 //ros message system
 #include "ros/ros.h"
 #include "std_msgs/Float64MultiArray.h"
 #include "std_msgs/Bool.h"
 
+#include "sdu_sensor/ft_sensor.h"
+
 
 
 using namespace std;
 
-//std::shared_ptr<Ur10eFTsensor> ft_sensor;
-//ur_10_e_ft_sensor = std::make_shared<Ur10eFTsensor>()
 
-std::shared_ptr<Ur10eFTsensor> ft_sensor;
-std::shared_ptr<PoseEstimation> tool_estimation;
+std::shared_ptr<FTsensor> ft_sensor;
 std::shared_ptr<Kinematics> ur10e_kinematics;
 
 
@@ -48,10 +52,7 @@ void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& 
 void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
 
 //for ros test
-
-double joint[6];
+std::vector<double> joint_vector;
 bool zero_command;
 
-
-
-#endif /* SDU_UR10E_POSE_ESTIMATION_UR10E_FORCE_TORQUE_SENSOR_TEST_INCLUDE_UR10E_FORCE_TORQUE_SENSOR_TEST_UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */
+#endif /* UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */

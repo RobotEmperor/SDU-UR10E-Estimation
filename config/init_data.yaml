@@ -3,6 +3,7 @@
 
 sampling_time : 2.0
 control_time : 0.002 #2ms, 500Hz
+mass_of_tool : 4.118
 
 #low pass filter
 lpf_force_cutoff_frequency  : 10
@@ -22,8 +23,8 @@ gain_R_high_frequency : 0.1 # 0.1
 gain_R_torque_low_frequency : 6    # 6
 gain_R_torque_high_frequency : 0.01 # 0.1
 
-limit_low_rate_of_change : -10
-limit_high_rate_of_change : 10
+limit_low_rate_of_change : -1
+limit_high_rate_of_change : 1
 
 
 #ft collision detection parameter
