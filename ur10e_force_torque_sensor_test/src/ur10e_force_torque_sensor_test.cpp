@@ -23,7 +23,7 @@ void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& 
     raw_force_torque_data(3,0) = 0;
     raw_force_torque_data(4,0) = 0;
     raw_force_torque_data(5,0) = 0;
-    return; // some data is missed
+    return; // some data are missed
   }
   else
   {
@@ -41,16 +41,15 @@ void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& 
     joint_vector[4] = msg->data[16];
     joint_vector[5] = msg->data[17];
 
-    tool_acc_data(0,0) = msg->data[18];
-    tool_acc_data(1,0) = msg->data[19];
-    tool_acc_data(2,0) = msg->data[20];
+    raw_tool_acc_data(0,0) = msg->data[18];
+    raw_tool_acc_data(1,0) = msg->data[19];
+    raw_tool_acc_data(2,0) = msg->data[20];
   }
 }
 
 void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg)
 {
   zero_command = true;
-
 }
 
 int main (int argc, char **argv)
@@ -72,18 +71,25 @@ int main (int argc, char **argv)
   raw_force_torque_data.resize(6,1);
   raw_force_torque_data.fill(0);
 
-  tool_acc_data.resize(3,1);
+  raw_tool_acc_data.resize(4,1);
+  raw_tool_acc_data.fill(0);
+  raw_tool_acc_data(3,0)=1;
+
+  tool_acc_data.resize(4,1);
   tool_acc_data.fill(0);
+  tool_acc_data(3,0) = 1;
 
   std::string init_data_path;
   init_data_path = "../config/init_data.yaml";
 
-
-
   ft_sensor = std::make_shared<FTsensor>();
+  tool_estimation = std::make_shared<ToolEstimation>();
   ur10e_kinematics = std::make_shared<Kinematics>();
 
+
   ft_sensor->initialize(init_data_path);
+  tool_estimation->initialize();
+  tool_estimation->set_parameters(control_time, 4.118);
   zero_command = false;
 
   joint_vector.resize(6);
@@ -101,7 +107,7 @@ int main (int argc, char **argv)
   //  force_data     = rtde_receive.getActualTCPForce();
 
 
-  usleep(3000000); // 2ms
+  usleep(3000000); //
 
   // offset initialize function
   for(int num = 1;num < 501; num ++)
@@ -115,19 +121,19 @@ int main (int argc, char **argv)
 
 
     ft_sensor -> offset_init(raw_force_torque_data, 500);
-    //tool_estimation-> offset_init(tool_estimation->tool_linear_acc_data, 500);
+    tool_estimation -> offset_init(raw_tool_acc_data, 500);
     usleep(2000); // 2ms
   }
   //cout <<  tool_estimation->offset_data << "\n\n";
 
   cout <<"\n--------------------------\n";
 
-  cout <<  ft_sensor ->get_offset_data()[0] << "\n\n";
-  cout <<  ft_sensor ->get_offset_data()[1] << "\n\n";
-  cout <<  ft_sensor ->get_offset_data()[2] << "\n\n";
-  cout <<  ft_sensor ->get_offset_data()[3] << "\n\n";
-  cout <<  ft_sensor ->get_offset_data()[4] << "\n\n";
-  cout <<  ft_sensor ->get_offset_data()[5] << "\n\n";
+  cout <<  ft_sensor->get_offset_data() << "\n\n";
+
+  cout <<"\n--------------------------\n";
+
+    cout <<  tool_estimation->get_offset_data() << "\n\n";
+
 
   signal(SIGINT, inthand);
 
@@ -158,12 +164,8 @@ int main (int argc, char **argv)
       // cout <<  tool_estimation->offset_data << "\n\n";
       cout <<"\n--------------------------\n";
 
-      cout <<  ft_sensor ->get_offset_data()[0] << "\n\n";
-      cout <<  ft_sensor ->get_offset_data()[1] << "\n\n";
-      cout <<  ft_sensor ->get_offset_data()[2] << "\n\n";
-      cout <<  ft_sensor ->get_offset_data()[3] << "\n\n";
-      cout <<  ft_sensor ->get_offset_data()[4] << "\n\n";
-      cout <<  ft_sensor ->get_offset_data()[5] << "\n\n";
+      cout <<  ft_sensor ->get_offset_data() << "\n\n";
+
       zero_command = false;
 
     }
@@ -173,14 +175,13 @@ int main (int argc, char **argv)
     //    {
     //      raw_force_torque_data(num,0) = force_data[num];
     //    }
-    //ur10e_kinematics->temp_data(0,0) = tool_acc_data(0,0) - tool_estimation->offset_data(0,0);
-    //ur10e_kinematics->temp_data(1,0) = tool_acc_data(1,0) - tool_estimation->offset_data(1,0);
-    //ur10e_kinematics->temp_data(2,0) = tool_acc_data(2,0) - tool_estimation->offset_data(2,0);
-
+    tool_acc_data = raw_tool_acc_data - tool_estimation->get_offset_data();
     ur10e_kinematics->calculate_forward_kinematics(joint_vector);
-    // ur10e_kinematics->get_tf_base_to_tool()
-    //ur10e_kinematics->temp_data = ur10e_kinematics->transformation_result*ur10e_kinematics->temp_data;
+    tool_acc_data = ur10e_kinematics->get_tf_base_to_tool(tool_acc_data);
 
+
+
+    contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_sensor->get_offset_data(), tool_acc_data);
 
     ft_sensor->filter_processing(raw_force_torque_data);
 
@@ -192,17 +193,17 @@ int main (int argc, char **argv)
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(5,0));
 
 
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()[0]);
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()[1]);
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()[2]);
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()[3]);
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()[4]);
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()[5]);
+    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(0,0));
+    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(1,0));
+    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(2,0));
+    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(3,0));
+    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(4,0));
+    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(5,0));
 
 
-    //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[0]);
-    //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[1]);
-    //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[2]);
+    filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
+    filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
+    filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
     //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[3]);
     //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[4]);
     //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[5]);
