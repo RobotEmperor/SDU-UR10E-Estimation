@@ -94,34 +94,37 @@ int main (int argc, char **argv)
 
   joint_vector.resize(6);
 
-  //  RTDEReceiveInterface rtde_receive("192.168.1.129");
-  //  std::vector<double> joint_positions        = rtde_receive.getActualQ();
-  //  std::vector<double> force_data             = rtde_receive.getActualTCPForce();
-  //  std::vector<double> tool_linear_acc_data   = rtde_receive.getActualToolAccelerometer();
-  //  std::vector<double> tcp_pose_data         = rtde_receive.getActualTCPPose();
-  //  std::vector<double> tcp_speed_data         = rtde_receive.getActualTCPSpeed();
-  //  std::vector<double> torque_data         = rtde_receive.getTargetMoment();
-  //
-  //  tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
-  //  tcp_pose_data = rtde_receive.getActualTCPPose();
-  //  force_data     = rtde_receive.getActualTCPForce();
+  RTDEReceiveInterface rtde_receive("192.168.1.129");
+  std::vector<double> joint_positions        = rtde_receive.getActualQ();
+  std::vector<double> force_data             = rtde_receive.getActualTCPForce();
+  std::vector<double> tool_linear_acc_data   = rtde_receive.getActualToolAccelerometer();
+  std::vector<double> tcp_pose_data         = rtde_receive.getActualTCPPose();
+  std::vector<double> tcp_speed_data         = rtde_receive.getActualTCPSpeed();
+  std::vector<double> torque_data         = rtde_receive.getTargetMoment();
+
+  tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+  tcp_pose_data = rtde_receive.getActualTCPPose();
+  force_data     = rtde_receive.getActualTCPForce();
 
 
   usleep(3000000); //
 
   // offset initialize function
-  for(int num = 1;num < 501; num ++)
+  for(int num = 1;num < 1001; num ++)
   {
     ros::spinOnce();
-    //force_data     = rtde_receive.getActualTCPForce();
+    force_data     = rtde_receive.getActualTCPForce();
+    tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
     for(int var = 0; var < 6; var ++)
     {
-      //ft_sensor->ft_raw_data(var,0) = force_data[var];
+      raw_force_torque_data(var,0) = force_data[var];
     }
+    raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
+    raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
+    raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
 
-
-    ft_sensor -> offset_init(raw_force_torque_data, 500);
-    tool_estimation -> offset_init(raw_tool_acc_data, 500);
+    ft_sensor -> offset_init(raw_force_torque_data, 1000);
+    tool_estimation -> offset_init(raw_tool_acc_data, 1000);
     usleep(2000); // 2ms
   }
   //cout <<  tool_estimation->offset_data << "\n\n";
@@ -132,7 +135,7 @@ int main (int argc, char **argv)
 
   cout <<"\n--------------------------\n";
 
-    cout <<  tool_estimation->get_offset_data() << "\n\n";
+  cout <<  tool_estimation->get_offset_data() << "\n\n";
 
 
   signal(SIGINT, inthand);
@@ -140,35 +143,39 @@ int main (int argc, char **argv)
   while (!stop)
   {
     usleep(2000); // 2ms
-    //    tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
-    //    force_data     = rtde_receive.getActualTCPForce();
-    //    torque_data         = rtde_receive.getTargetMoment();
-    //    joint_positions        = rtde_receive.getActualQ();
-    //    tcp_pose_data         = rtde_receive.getActualTCPPose();
-    //    tcp_speed_data         = rtde_receive.getActualTCPSpeed();
+        tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+        force_data     = rtde_receive.getActualTCPForce();
+        joint_positions        = rtde_receive.getActualQ();
+
     if(zero_command == true)
     {
       // offset initialize function
-      for(int num = 1;num < 501; num ++)
+      for(int num = 1;num < 1001; num ++)
       {
-        ros::spinOnce();
+        //ros::spinOnce();
         //force_data     = rtde_receive.getActualTCPForce();
         for(int var = 0; var < 6; var ++)
         {
-          //ft_sensor->ft_raw_data(var,0) = force_data[var];
+          raw_force_torque_data(var,0) = force_data[var];
         }
-        ft_sensor -> offset_init(raw_force_torque_data, 500);
+        ft_sensor -> offset_init(raw_force_torque_data, 1000);
 
         usleep(2000); // 2ms
       }
-      // cout <<  tool_estimation->offset_data << "\n\n";
       cout <<"\n--------------------------\n";
 
       cout <<  ft_sensor ->get_offset_data() << "\n\n";
 
       zero_command = false;
-
     }
+
+    for(int var = 0; var < 6; var ++)
+    {
+      raw_force_torque_data(var,0) = force_data[var];
+    }
+    raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
+    raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
+    raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
 
 
     //    for(int num = 0;num < 6; num ++)
@@ -176,10 +183,9 @@ int main (int argc, char **argv)
     //      raw_force_torque_data(num,0) = force_data[num];
     //    }
     tool_acc_data = raw_tool_acc_data - tool_estimation->get_offset_data();
-    ur10e_kinematics->calculate_forward_kinematics(joint_vector);
+    //ur10e_kinematics->calculate_forward_kinematics(joint_vector);
+    ur10e_kinematics->calculate_forward_kinematics(joint_positions);
     tool_acc_data = ur10e_kinematics->get_tf_base_to_tool(tool_acc_data);
-
-
 
     contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_sensor->get_offset_data(), tool_acc_data);
 
@@ -204,31 +210,18 @@ int main (int argc, char **argv)
     filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
     filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
     filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
-    //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[3]);
-    //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[4]);
-    //filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->joint_positions[5]);
 
-    //filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[0]);
-    //filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[1]);
-    //filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[2]);
-    //
-    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[0]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[1]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[2]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[3]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[4]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[5]);
-    //
-    //filtered_force_torque_data_msg.data.push_back(tcp_speed_data[0]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_speed_data[1]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_speed_data[2]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_speed_data[3]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_speed_data[4]);
-    //filtered_force_torque_data_msg.data.push_back(tcp_speed_data[5]);
+    filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[0]);
+    filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[1]);
+    filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[2]);
 
-    //filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(0,0));
-    //filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(1,0));
-    //filtered_force_torque_data_msg.data.push_back(ft_sensor->ft_filtered_data_temp(2,0));
+    filtered_force_torque_data_msg.data.push_back(joint_positions[0]);
+    filtered_force_torque_data_msg.data.push_back(joint_positions[1]);
+    filtered_force_torque_data_msg.data.push_back(joint_positions[2]);
+    filtered_force_torque_data_msg.data.push_back(joint_positions[3]);
+    filtered_force_torque_data_msg.data.push_back(joint_positions[4]);
+    filtered_force_torque_data_msg.data.push_back(joint_positions[5]);
+
 
     filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
     filtered_force_torque_data_msg.data.clear();

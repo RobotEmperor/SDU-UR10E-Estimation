@@ -18,7 +18,7 @@ hpf_torque_cutoff_frequency : 0
 
 gain_Q : 0.001
 gain_R_low_frequency : 6    # 6
-gain_R_high_frequency : 0.1 # 0.1
+gain_R_high_frequency : 1 # 0.1
 
 gain_R_torque_low_frequency : 6    # 6
 gain_R_torque_high_frequency : 0.01 # 0.1

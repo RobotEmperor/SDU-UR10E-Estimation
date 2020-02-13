@@ -28,6 +28,7 @@
 #include "std_msgs/Bool.h"
 
 #include "sdu_sensor/ft_sensor.h"
+#include "sdu_sensor/tool_estimation.h"
 
 using namespace std;
 
