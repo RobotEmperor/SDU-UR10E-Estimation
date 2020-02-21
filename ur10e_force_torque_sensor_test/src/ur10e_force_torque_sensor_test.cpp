@@ -82,12 +82,12 @@ int main (int argc, char **argv)
   std::string init_data_path;
   init_data_path = "../config/init_data.yaml";
 
-  ft_sensor = std::make_shared<FTsensor>();
+  ft_filter = std::make_shared<FTfilter>();
   tool_estimation = std::make_shared<ToolEstimation>();
   ur10e_kinematics = std::make_shared<Kinematics>();
 
 
-  ft_sensor->initialize(init_data_path);
+  ft_filter->initialize(init_data_path);
   tool_estimation->initialize();
   tool_estimation->set_parameters(control_time, 4.118);
   zero_command = false;
@@ -123,7 +123,7 @@ int main (int argc, char **argv)
     raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
     raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
 
-    ft_sensor -> offset_init(raw_force_torque_data, 1000);
+    ft_filter -> offset_init(raw_force_torque_data, 1000);
     tool_estimation -> offset_init(raw_tool_acc_data, 1000);
     usleep(2000); // 2ms
   }
@@ -131,7 +131,7 @@ int main (int argc, char **argv)
 
   cout <<"\n--------------------------\n";
 
-  cout <<  ft_sensor->get_offset_data() << "\n\n";
+  cout <<  ft_filter->get_offset_data() << "\n\n";
 
   cout <<"\n--------------------------\n";
 
@@ -158,13 +158,13 @@ int main (int argc, char **argv)
         {
           raw_force_torque_data(var,0) = force_data[var];
         }
-        ft_sensor -> offset_init(raw_force_torque_data, 1000);
+        ft_filter -> offset_init(raw_force_torque_data, 1000);
 
         usleep(2000); // 2ms
       }
       cout <<"\n--------------------------\n";
 
-      cout <<  ft_sensor ->get_offset_data() << "\n\n";
+      cout <<  ft_filter ->get_offset_data() << "\n\n";
 
       zero_command = false;
     }
@@ -187,9 +187,9 @@ int main (int argc, char **argv)
     ur10e_kinematics->calculate_forward_kinematics(joint_positions);
     tool_acc_data = ur10e_kinematics->get_tf_base_to_tool(tool_acc_data);
 
-    contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_sensor->get_offset_data(), tool_acc_data);
+    contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
 
-    ft_sensor->filter_processing(raw_force_torque_data);
+    ft_filter->filter_processing(raw_force_torque_data);
 
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(0,0));
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
@@ -199,12 +199,12 @@ int main (int argc, char **argv)
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(5,0));
 
 
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(0,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(1,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(2,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(3,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(4,0));
-    filtered_force_torque_data_msg.data.push_back(ft_sensor->get_filtered_data()(5,0));
+    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(0,0));
+    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(1,0));
+    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(2,0));
+    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(3,0));
+    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(4,0));
+    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(5,0));
 
 
     filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
@@ -221,6 +221,9 @@ int main (int argc, char **argv)
     filtered_force_torque_data_msg.data.push_back(joint_positions[3]);
     filtered_force_torque_data_msg.data.push_back(joint_positions[4]);
     filtered_force_torque_data_msg.data.push_back(joint_positions[5]);
+
+    // position will be added
+    // transformation check
 
 
     filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);

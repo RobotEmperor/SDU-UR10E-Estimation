@@ -27,12 +27,12 @@
 #include "std_msgs/Float64MultiArray.h"
 #include "std_msgs/Bool.h"
 
-#include "sdu_sensor/ft_sensor.h"
+#include "sdu_sensor/ft_filter.h"
 #include "sdu_sensor/tool_estimation.h"
 
 using namespace std;
 
-std::shared_ptr<FTsensor> ft_sensor;
+std::shared_ptr<FTfilter> ft_filter;
 std::shared_ptr<ToolEstimation> tool_estimation;
 std::shared_ptr<Kinematics> ur10e_kinematics;
 

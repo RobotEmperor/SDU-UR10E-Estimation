@@ -13,7 +13,7 @@ find_package(Eigen3 REQUIRED)
 
 
 INCLUDE_DIRECTORIES (${CMAKE_SOURCE_DIR}/ur10e_force_torque_sensor_test/include
-                     /opt/ros/kinetic/include
+                     /opt/ros/melodic/include
                      ${EIGEN3_INCLUDE_DIR}
                      )
 
@@ -30,7 +30,7 @@ set( SOURCE_FILES
 
 
 link_directories(/usr/local/lib
-                 /opt/ros/kinetic/lib)
+                 /opt/ros/melodic/lib)
 
 #link_directories(/usr/local/lib
 #                 /opt/ros/kinetic/lib)
