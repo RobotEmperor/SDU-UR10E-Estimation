@@ -100,7 +100,7 @@ int main (int argc, char **argv)
   std::vector<double> tool_linear_acc_data   = rtde_receive.getActualToolAccelerometer();
   std::vector<double> tcp_pose_data         = rtde_receive.getActualTCPPose();
   std::vector<double> tcp_speed_data         = rtde_receive.getActualTCPSpeed();
-  std::vector<double> torque_data         = rtde_receive.getTargetMoment();
+  //std::vector<double> torque_data         = rtde_receive.getTargetMoment();
 
   tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
   tcp_pose_data = rtde_receive.getActualTCPPose();
@@ -146,6 +146,7 @@ int main (int argc, char **argv)
         tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
         force_data     = rtde_receive.getActualTCPForce();
         joint_positions        = rtde_receive.getActualQ();
+        tcp_pose_data = rtde_receive.getActualTCPPose();
 
     if(zero_command == true)
     {
@@ -187,9 +188,22 @@ int main (int argc, char **argv)
     ur10e_kinematics->calculate_forward_kinematics(joint_positions);
     tool_acc_data = ur10e_kinematics->get_tf_base_to_tool(tool_acc_data);
 
+
+    tool_estimation->set_acc_input_data(tool_acc_data);
+
     contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
 
     ft_filter->filter_processing(raw_force_torque_data);
+
+    //cout << ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5]) << "\n\n";
+    cout << "--------------------------------" << "\n\n";
+
+    //cout << tool_estimation ->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(), "x");
+
+
+    //cout << tool_estimation->get_angular_acc()(0,0) << "\n\n";
+
+
 
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(0,0));
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
@@ -221,6 +235,17 @@ int main (int argc, char **argv)
     filtered_force_torque_data_msg.data.push_back(joint_positions[3]);
     filtered_force_torque_data_msg.data.push_back(joint_positions[4]);
     filtered_force_torque_data_msg.data.push_back(joint_positions[5]);
+
+    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[0]);
+    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[1]);
+    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[2]);
+    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[3]);
+    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[4]);
+    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[5]);
+
+   // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(0,0));
+   // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(1,0));
+   // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(2,0));
 
     // position will be added
     // transformation check
