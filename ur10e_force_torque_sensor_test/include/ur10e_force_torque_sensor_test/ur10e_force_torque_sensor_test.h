@@ -45,6 +45,8 @@ Eigen::MatrixXd raw_tool_acc_data;
 Eigen::MatrixXd tool_acc_data;
 Eigen::MatrixXd contacted_force_data;
 
+Eigen::MatrixXd tcp_pose;
+
 ros::Publisher filtered_force_torque_data_pub;
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
 

@@ -34,16 +34,23 @@ void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& 
     raw_force_torque_data(4,0) = msg->data[4];
     raw_force_torque_data(5,0) = msg->data[5];
 
-    joint_vector[0] = msg->data[12];
-    joint_vector[1] = msg->data[13];
-    joint_vector[2] = msg->data[14];
-    joint_vector[3] = msg->data[15];
-    joint_vector[4] = msg->data[16];
-    joint_vector[5] = msg->data[17];
+    joint_vector[0] = msg->data[18];
+    joint_vector[1] = msg->data[19];
+    joint_vector[2] = msg->data[20];
+    joint_vector[3] = msg->data[21];
+    joint_vector[4] = msg->data[22];
+    joint_vector[5] = msg->data[23];
 
-    raw_tool_acc_data(0,0) = msg->data[18];
-    raw_tool_acc_data(1,0) = msg->data[19];
-    raw_tool_acc_data(2,0) = msg->data[20];
+    raw_tool_acc_data(0,0) = msg->data[15];
+    raw_tool_acc_data(1,0) = msg->data[16];
+    raw_tool_acc_data(2,0) = msg->data[17];
+
+    tcp_pose(0,0) = msg->data[24];
+    tcp_pose(1,0) = msg->data[25];
+    tcp_pose(2,0) = msg->data[26];
+    tcp_pose(3,0) = msg->data[27];
+    tcp_pose(4,0) = msg->data[28];
+    tcp_pose(5,0) = msg->data[29];
   }
 }
 
@@ -57,14 +64,14 @@ int main (int argc, char **argv)
   printf("Force Torque Sensor Test Node Start \n");
   ros::init(argc, argv, "talker");
   ros::NodeHandle n;
-  filtered_force_torque_data_pub = n.advertise<std_msgs::Float64MultiArray>("/chatter", 10);
+  filtered_force_torque_data_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/chatter", 10);
 
   // ros subsrcibe
   ros::Subscriber raw_force_torque_data_sub;
   ros::Subscriber zero_command_sub;
 
   //raw_force_torque_data_sub = n.subscribe("/sdu/ur10e/raw_force_torque_data", 10, RawForceTorqueDataMsgCallBack);
-  raw_force_torque_data_sub = n.subscribe("/sdu/chatter", 10, RawForceTorqueDataMsgCallBack);
+  raw_force_torque_data_sub = n.subscribe("/chatter", 10, RawForceTorqueDataMsgCallBack);
   zero_command_sub          = n.subscribe("/sdu/zero", 10, ZeroCommandMsgCallBack);
 
   control_time = 0.002;
@@ -78,6 +85,9 @@ int main (int argc, char **argv)
   tool_acc_data.resize(4,1);
   tool_acc_data.fill(0);
   tool_acc_data(3,0) = 1;
+
+  tcp_pose.resize(6,1);
+  tcp_pose.fill(0);
 
   std::string init_data_path;
   init_data_path = "../config/init_data.yaml";
@@ -94,17 +104,17 @@ int main (int argc, char **argv)
 
   joint_vector.resize(6);
 
-  RTDEReceiveInterface rtde_receive("192.168.1.129");
-  std::vector<double> joint_positions        = rtde_receive.getActualQ();
-  std::vector<double> force_data             = rtde_receive.getActualTCPForce();
-  std::vector<double> tool_linear_acc_data   = rtde_receive.getActualToolAccelerometer();
-  std::vector<double> tcp_pose_data         = rtde_receive.getActualTCPPose();
-  std::vector<double> tcp_speed_data         = rtde_receive.getActualTCPSpeed();
-  //std::vector<double> torque_data         = rtde_receive.getTargetMoment();
-
-  tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
-  tcp_pose_data = rtde_receive.getActualTCPPose();
-  force_data     = rtde_receive.getActualTCPForce();
+//  RTDEReceiveInterface rtde_receive("192.168.1.129");
+//  std::vector<double> joint_positions        = rtde_receive.getActualQ();
+//  std::vector<double> force_data             = rtde_receive.getActualTCPForce();
+//  std::vector<double> tool_linear_acc_data   = rtde_receive.getActualToolAccelerometer();
+//  std::vector<double> tcp_pose_data         = rtde_receive.getActualTCPPose();
+//  std::vector<double> tcp_speed_data         = rtde_receive.getActualTCPSpeed();
+//
+//
+//  tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+//  tcp_pose_data = rtde_receive.getActualTCPPose();
+//  force_data     = rtde_receive.getActualTCPForce();
 
 
   usleep(3000000); //
@@ -113,15 +123,15 @@ int main (int argc, char **argv)
   for(int num = 1;num < 1001; num ++)
   {
     ros::spinOnce();
-    force_data     = rtde_receive.getActualTCPForce();
-    tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+    //force_data     = rtde_receive.getActualTCPForce();
+    //tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
     for(int var = 0; var < 6; var ++)
     {
-      raw_force_torque_data(var,0) = force_data[var];
+      //raw_force_torque_data(var,0) = force_data[var];
     }
-    raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
-    raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
-    raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
+    //raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
+    //raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
+    //raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
 
     ft_filter -> offset_init(raw_force_torque_data, 1000);
     tool_estimation -> offset_init(raw_tool_acc_data, 1000);
@@ -143,10 +153,10 @@ int main (int argc, char **argv)
   while (!stop)
   {
     usleep(2000); // 2ms
-        tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
-        force_data     = rtde_receive.getActualTCPForce();
-        joint_positions        = rtde_receive.getActualQ();
-        tcp_pose_data = rtde_receive.getActualTCPPose();
+    //tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+    //force_data     = rtde_receive.getActualTCPForce();
+    //joint_positions        = rtde_receive.getActualQ();
+    //tcp_pose_data = rtde_receive.getActualTCPPose();
 
     if(zero_command == true)
     {
@@ -157,7 +167,7 @@ int main (int argc, char **argv)
         //force_data     = rtde_receive.getActualTCPForce();
         for(int var = 0; var < 6; var ++)
         {
-          raw_force_torque_data(var,0) = force_data[var];
+          //raw_force_torque_data(var,0) = force_data[var];
         }
         ft_filter -> offset_init(raw_force_torque_data, 1000);
 
@@ -172,11 +182,11 @@ int main (int argc, char **argv)
 
     for(int var = 0; var < 6; var ++)
     {
-      raw_force_torque_data(var,0) = force_data[var];
+      //raw_force_torque_data(var,0) = force_data[var];
     }
-    raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
-    raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
-    raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
+    //raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
+    //raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
+    //raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
 
 
     //    for(int num = 0;num < 6; num ++)
@@ -184,24 +194,36 @@ int main (int argc, char **argv)
     //      raw_force_torque_data(num,0) = force_data[num];
     //    }
     tool_acc_data = raw_tool_acc_data - tool_estimation->get_offset_data();
-    //ur10e_kinematics->calculate_forward_kinematics(joint_vector);
-    ur10e_kinematics->calculate_forward_kinematics(joint_positions);
+    ur10e_kinematics->calculate_forward_kinematics(joint_vector);
+    //ur10e_kinematics->calculate_forward_kinematics(joint_positions);
     tool_acc_data = ur10e_kinematics->get_tf_base_to_tool(tool_acc_data);
-
-
     tool_estimation->set_acc_input_data(tool_acc_data);
+    tool_estimation->set_pose_input_data(tcp_pose);
+    tool_estimation->get_angular_acc();
 
-    contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
+
+
+    //tool_estimation->get_angular_acc();
+
+    //contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
 
     ft_filter->filter_processing(raw_force_torque_data);
 
+    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"x");
+    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"y");
+    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"z");
+
+    contacted_force_data = tool_estimation->get_contacted_force(ft_filter->get_filtered_data(), tool_acc_data);
+
+
+
     //cout << ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5]) << "\n\n";
-    cout << "--------------------------------" << "\n\n";
+    //cout << "--------------------------------" << "\n\n";
 
     //cout << tool_estimation ->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(), "x");
 
 
-    //cout << tool_estimation->get_angular_acc()(0,0) << "\n\n";
+    cout << tool_estimation->inertia_of_tool_ << "\n\n";
 
 
 
@@ -220,32 +242,40 @@ int main (int argc, char **argv)
     filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(4,0));
     filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(5,0));
 
-
     filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
     filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
     filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
 
-    filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[0]);
-    filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[1]);
-    filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[2]);
+    filtered_force_torque_data_msg.data.push_back(contacted_force_data(3,0));
+    filtered_force_torque_data_msg.data.push_back(contacted_force_data(4,0));
+    filtered_force_torque_data_msg.data.push_back(contacted_force_data(5,0));
 
-    filtered_force_torque_data_msg.data.push_back(joint_positions[0]);
-    filtered_force_torque_data_msg.data.push_back(joint_positions[1]);
-    filtered_force_torque_data_msg.data.push_back(joint_positions[2]);
-    filtered_force_torque_data_msg.data.push_back(joint_positions[3]);
-    filtered_force_torque_data_msg.data.push_back(joint_positions[4]);
-    filtered_force_torque_data_msg.data.push_back(joint_positions[5]);
 
-    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[0]);
-    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[1]);
-    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[2]);
-    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[3]);
-    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[4]);
-    filtered_force_torque_data_msg.data.push_back(tcp_pose_data[5]);
+//    filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
+//    filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
+//    filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
 
-   // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(0,0));
-   // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(1,0));
-   // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(2,0));
+    //filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[0]);
+    //filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[1]);
+    //filtered_force_torque_data_msg.data.push_back(tool_linear_acc_data[2]);
+
+    //filtered_force_torque_data_msg.data.push_back(joint_positions[0]);
+    //filtered_force_torque_data_msg.data.push_back(joint_positions[1]);
+    //filtered_force_torque_data_msg.data.push_back(joint_positions[2]);
+    //filtered_force_torque_data_msg.data.push_back(joint_positions[3]);
+    //filtered_force_torque_data_msg.data.push_back(joint_positions[4]);
+    //filtered_force_torque_data_msg.data.push_back(joint_positions[5]);
+    //
+    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[0]);
+    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[1]);
+    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[2]);
+    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[3]);
+    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[4]);
+    //filtered_force_torque_data_msg.data.push_back(tcp_pose_data[5]);
+
+    // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(0,0));
+    // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(1,0));
+    // filtered_force_torque_data_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5])(2,0));
 
     // position will be added
     // transformation check
