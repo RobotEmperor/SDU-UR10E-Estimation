@@ -57,6 +57,7 @@ Eigen::MatrixXd raw_tool_acc_data;
 Eigen::MatrixXd tool_acc_data;
 Eigen::MatrixXd contacted_force_data;
 Eigen::MatrixXd tcp_pose;
+Eigen::MatrixXd tcp_speed;
 
 double control_time;
 double sampling_time;
@@ -70,13 +71,15 @@ string getActualTCPForce;
 string getActualToolAccelerometer;
 string getFilteredForce;
 string getContactedForceTorque;
+string getActualToolSpeed;
+string getActualToolAcc;
 
 //ros
 ros::Publisher filtered_force_torque_data_pub;
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
 
-void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg);
-void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
+//void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg);
+//void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
 
 //for ros test
 std::vector<double> joint_vector;
