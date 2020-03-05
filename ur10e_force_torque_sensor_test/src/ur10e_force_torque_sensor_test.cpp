@@ -102,7 +102,7 @@ void loop_task_proc(void *arg)
     tool_estimation->set_acc_input_data(tool_acc_data);
     tool_estimation->set_pose_input_data(tcp_pose);
     tool_estimation->set_speed_input_data(tcp_speed);
-    tool_estimation->get_angular_acc();
+    tool_estimation->calculate_angular_acc();
 
     ft_filter->filter_processing(raw_force_torque_data);
 
@@ -136,9 +136,9 @@ void loop_task_proc(void *arg)
     //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(4,0));
     //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(5,0));
     //
-    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_euler_angle()(0,0));
-    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_euler_angle()(1,0));
-    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_euler_angle()(2,0));
+    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(0,0));
+    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(1,0));
+    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(2,0));
     //
     //    filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
     //    filtered_force_torque_data_msg.data.clear();
@@ -161,7 +161,7 @@ void loop_task_proc(void *arg)
     }
     for(int num = 0; num<3; num++)
     {
-      getActualTCPPose += " "+to_string(tool_estimation->get_euler_angle()(num,0));
+      getActualTCPPose += " "+to_string(tool_estimation->get_orientation_angle()(num,0));
     }
 
     data_line = to_string(time_count)+getActualTCPPose+getActualTCPForce+getFilteredForce+getContactedForceTorque+
