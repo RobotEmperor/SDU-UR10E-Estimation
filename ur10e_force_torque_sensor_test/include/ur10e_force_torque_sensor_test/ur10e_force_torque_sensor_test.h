@@ -19,6 +19,7 @@
 
 //ur_rtde library
 #include <ur_rtde/rtde_receive_interface.h>
+#include <ur_rtde/rtde_control_interface.h>
 
 //xenomai rt system
 #include <unistd.h>
@@ -32,6 +33,7 @@
 //ros message system
 #include "ros/ros.h"
 #include "std_msgs/Float64MultiArray.h"
+#include "std_msgs/Float64.h"
 #include "std_msgs/Bool.h"
 
 #include "sdu_sensor/ft_filter.h"
@@ -76,13 +78,29 @@ string getActualToolAcc;
 
 //ros
 ros::Publisher filtered_force_torque_data_pub;
+
+ros::Publisher gazebo_shoulder_pan_position_pub;
+ros::Publisher gazebo_shoulder_lift_position_pub;
+ros::Publisher gazebo_elbow_position_pub;
+ros::Publisher gazebo_wrist_1_position_pub;
+ros::Publisher gazebo_wrist_2_position_pub;
+ros::Publisher gazebo_wrist_3_position_pub;
+
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
+
+std_msgs::Float64 gazebo_shoulder_pan_position_msg;
+std_msgs::Float64 gazebo_shoulder_lift_position_msg;
+std_msgs::Float64 gazebo_elbow_position_msg;
+std_msgs::Float64 gazebo_wrist_1_position_msg;
+std_msgs::Float64 gazebo_wrist_2_position_msg;
+std_msgs::Float64 gazebo_wrist_3_position_msg;
 
 //void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg);
 //void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
 
 //for ros test
 std::vector<double> joint_vector;
+std::vector<double> desired_pose_vector;
 bool zero_command;
 
 #endif /* UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */

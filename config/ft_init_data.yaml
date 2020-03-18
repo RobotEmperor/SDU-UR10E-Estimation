@@ -5,6 +5,10 @@ sampling_time : 2.0
 control_time : 0.002 #2ms, 500Hz
 mass_of_tool : 4.118
 
+# simulation on/off
+simulation : 1 # 1 is on, 0 is off 
+
+
 #low pass filter
 lpf_force_cutoff_frequency  : 10
 lpf_torque_cutoff_frequency : 10
