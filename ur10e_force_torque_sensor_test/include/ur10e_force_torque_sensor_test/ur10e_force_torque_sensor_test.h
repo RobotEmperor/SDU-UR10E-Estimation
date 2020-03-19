@@ -38,9 +38,10 @@
 
 #include "sdu_sensor/ft_filter.h"
 #include "sdu_sensor/tool_estimation.h"
+#include "sdu_math/end_point_to_rad_cal.h"
 
-#define CLOCK_RES 1e-9 //Clock resolution is 1 ns by default
-#define LOOP_PERIOD 2e6 //Expressed in ticks // 2ms control time
+#define CLOCK_RES 1e-6 //Clock resolution is 1 us by default 1e-9
+#define LOOP_PERIOD 5e6 //Expressed in ticks // 10ms control time
 //RTIME period = 1000000000;
 RT_TASK loop_task;
 
@@ -52,6 +53,8 @@ void initialize();
 std::shared_ptr<FTfilter> ft_filter;
 std::shared_ptr<ToolEstimation> tool_estimation;
 std::shared_ptr<Kinematics> ur10e_kinematics;
+std::shared_ptr<CalRad> ur10e_traj;
+
 
 
 Eigen::MatrixXd raw_force_torque_data;
@@ -60,6 +63,7 @@ Eigen::MatrixXd tool_acc_data;
 Eigen::MatrixXd contacted_force_data;
 Eigen::MatrixXd tcp_pose;
 Eigen::MatrixXd tcp_speed;
+Eigen::MatrixXd desired_pose_matrix;
 
 double control_time;
 double sampling_time;
@@ -97,6 +101,8 @@ std_msgs::Float64 gazebo_wrist_3_position_msg;
 
 //void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg);
 //void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
+
+void CommandDataMsgCallBack (const std_msgs::Float64::ConstPtr& msg);
 
 //for ros test
 std::vector<double> joint_vector;

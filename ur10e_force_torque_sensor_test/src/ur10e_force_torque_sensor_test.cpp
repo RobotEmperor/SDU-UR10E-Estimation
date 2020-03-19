@@ -20,7 +20,7 @@ void loop_task_proc(void *arg)
   rt_task_inquire(curtask, &curtaskinfo);
   int ctr = 0;
 
-  printf("Starting task %s with period of 2 ms ....\n", curtaskinfo.name);
+  printf("Starting task %s with period of 5 ms ....\n", curtaskinfo.name);
 
   //Make the task periodic with a specified loop period
   rt_task_set_periodic(NULL, TM_NOW, LOOP_PERIOD);
@@ -68,9 +68,23 @@ void loop_task_proc(void *arg)
 
   double previous_t = 0.0;
 
+  for(int num = 0; num <6 ; num ++)
+  {
+    desired_pose_matrix(num,0) =  desired_pose_vector[num];
+    desired_pose_matrix(num,1) =  desired_pose_vector[num];
+    ur10e_traj->current_pose_change(num,0) = desired_pose_vector[num];
+  }
+  ur10e_traj->cal_end_point_tra_px->current_pose = desired_pose_vector[0];
+  ur10e_traj->cal_end_point_tra_py->current_pose = desired_pose_vector[1];
+  ur10e_traj->cal_end_point_tra_pz->current_pose = desired_pose_vector[2];
+  ur10e_traj->cal_end_point_tra_alpha->current_pose = -180*DEGREE2RADIAN;
+
+
+  //desired_pose_matrix(2,1) = 0.7;
+
   //Start the task loop
   while(1){
-    if((rt_timer_read() - tstart)/1000000.0  - previous_t > 2.15) //2ms
+    if((rt_timer_read() - tstart)/1000000.0  - previous_t > 5.15) //2ms
     {
       printf("delayed Loop time: %.5f ms\n",((rt_timer_read() - tstart)/1000000.0  - previous_t) - 2);
     }
@@ -93,28 +107,44 @@ void loop_task_proc(void *arg)
     //    raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
     //    raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
 
-    time_count += 0.002;
+    time_count += 0.005;
 
     tool_acc_data = raw_tool_acc_data - tool_estimation->get_offset_data();
     // test
-//    joint_vector[0] = 3.1201586;
-//    joint_vector[1] = -1.26581597;
-//    joint_vector[2] = -1.98288117;
+    //    joint_vector[0] = 3.1201586;
+    //    joint_vector[1] = -1.26581597;
+    //    joint_vector[2] = -1.98288117;
+    //
+    //    joint_vector[3] = -1.4641402;
+    //    joint_vector[4] = 1.567635;
+    //    joint_vector[5] = -4.72955457;
+
+
+
+    ur10e_traj->cal_end_point_to_rad(desired_pose_matrix);
+
+
+    for(int num = 0; num <6 ; num ++)
+     {
+       desired_pose_vector[num] = ur10e_traj->get_traj_results()(num,0);
+     }
+
+//    cout <<"trajectory test" << "\n\n" ;
+//    cout << "x" << desired_pose_vector[0] << "\n\n" ;
+//    cout << "y" << desired_pose_vector[1] << "\n\n" ;
+//    cout << "z" << desired_pose_vector[2] << "\n\n" ;
 //
-//    joint_vector[3] = -1.4641402;
-//    joint_vector[4] = 1.567635;
-//    joint_vector[5] = -4.72955457;
+//    cout << "r" << desired_pose_vector[3] << "\n\n" ;
+//    cout << "p" << desired_pose_vector[4] << "\n\n" ;
+//    cout << "y" << desired_pose_vector[5] << "\n\n" ;
 
-    desired_pose_vector[0] = -0.5;
-    desired_pose_vector[1] = 0.184324;
-    desired_pose_vector[2] = 0.5875;
-    desired_pose_vector[3] = -180*DEGREE2RADIAN;
-    desired_pose_vector[4] = 0;
-    desired_pose_vector[5] = 0;
 
-    ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
     //ur10e_kinematics->calculate_forward_kinematics(joint_positions);
     ur10e_kinematics->calculate_inverse_kinematics(desired_pose_vector);
+    ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
+
+
+
     tool_acc_data = ur10e_kinematics->tf_base_to_tool(tool_acc_data);
     tool_estimation->set_acc_input_data(tool_acc_data);
     tool_estimation->set_pose_input_data(tcp_pose);
@@ -176,21 +206,6 @@ void loop_task_proc(void *arg)
     gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
 
     ros::spinOnce();
-
-    cout << "Tf matrix" << "\n\n";
-
-    cout << ur10e_kinematics->get_tf_base_to_tool() << "\n\n";
-
-    cout << "Rotation matrix" << "\n\n";
-
-    cout << "1 ::" << ur10e_kinematics->get_ik_joint_results()[0] << "\n\n";
-    cout << "2 ::" << ur10e_kinematics->get_ik_joint_results()[1] << "\n\n";
-    cout << "3 ::" << ur10e_kinematics->get_ik_joint_results()[2] << "\n\n";
-
-    cout << "4 ::" << ur10e_kinematics->get_ik_joint_results()[3] << "\n\n";
-    cout << "5 ::" << ur10e_kinematics->get_ik_joint_results()[4] << "\n\n";
-    cout << "6 ::" << ur10e_kinematics->get_ik_joint_results()[5] << "\n\n";
-
 
     //    for(int num = 0; num<6; num++)
     //    {
@@ -274,11 +289,16 @@ void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& 
 //{
 //  zero_command = true;
 //}
+void CommandDataMsgCallBack (const std_msgs::Float64::ConstPtr& msg)
+{
+  desired_pose_matrix(2,1) = msg->data;
+}
 void initialize()
 {
   ft_filter = std::make_shared<FTfilter>();
   tool_estimation = std::make_shared<ToolEstimation>();
   ur10e_kinematics = std::make_shared<Kinematics>();
+  ur10e_traj = std::make_shared<CalRad>();
 
   control_time = 0.002;
   raw_force_torque_data.resize(6,1);
@@ -298,11 +318,29 @@ void initialize()
   tcp_speed.resize(6,1);
   tcp_speed.fill(0);
 
+  desired_pose_matrix.resize(6,8);
+  desired_pose_matrix.fill(0);
+
+  // initial pose load
+  desired_pose_matrix(0,7) = 5;
+  desired_pose_matrix(1,7) = 5;
+  desired_pose_matrix(2,7) = 5;
+  desired_pose_matrix(3,7) = 5;
+  desired_pose_matrix(4,7) = 5;
+  desired_pose_matrix(5,7) = 5;
+
   joint_vector.resize(6);
   desired_pose_vector.resize(6);
 
-          //data variables define
-          getActualTCPPose = " actual_tcp_pose_x actual_tcp_pose_y actual_tcp_pose_z actual_tcp_pose_r actual_tcp_pose_p actual_tcp_pose_y";
+  desired_pose_vector[0] = -0.5;
+  desired_pose_vector[1] = 0.184324;
+  desired_pose_vector[2] = 0.5875;
+  desired_pose_vector[3] = -180*DEGREE2RADIAN;
+  desired_pose_vector[4] = 0;
+  desired_pose_vector[5] = 0;
+
+  //data variables define
+  getActualTCPPose = " actual_tcp_pose_x actual_tcp_pose_y actual_tcp_pose_z actual_tcp_pose_r actual_tcp_pose_p actual_tcp_pose_y";
   getActualTCPForce = " actual_tcp_force_x actual_tcp_force_y actual_tcp_force_z actual_tcp_force_r actual_tcp_force_p actual_tcp_force_y";
   getFilteredForce = " filtered_force_x filtered_force_y filtered_force_z filtered_torque_r filtered_torque_p filtered_torque_y";
   getContactedForceTorque = " contacted_force_x contacted_force_y contacted_force_z contacted_torque_r contacted_torque_p contacted_torque_y";
@@ -324,7 +362,120 @@ void initialize()
   getActualToolSpeed = "";
   getActualToolAcc = "";
   getActualQ = "";
+
+  for(int num = 0; num <6 ; num ++)
+  {
+    desired_pose_matrix(num,0) =  desired_pose_vector[num];
+    desired_pose_matrix(num,1) =  desired_pose_vector[num];
+    ur10e_traj->current_pose_change(num,0) = desired_pose_vector[num];
+  }
+  ur10e_traj->cal_end_point_tra_px->current_pose = desired_pose_vector[0];
+  ur10e_traj->cal_end_point_tra_py->current_pose = desired_pose_vector[1];
+  ur10e_traj->cal_end_point_tra_pz->current_pose = desired_pose_vector[2];
+  ur10e_traj->cal_end_point_tra_alpha->current_pose = -180*DEGREE2RADIAN;
 }
+
+//void controlFunction(const ros::TimerEvent&)
+//{
+//
+//
+//    time_count += 0.01;
+//
+//    tool_acc_data = raw_tool_acc_data - tool_estimation->get_offset_data();
+//    // test
+//    //    joint_vector[0] = 3.1201586;
+//    //    joint_vector[1] = -1.26581597;
+//    //    joint_vector[2] = -1.98288117;
+//    //
+//    //    joint_vector[3] = -1.4641402;
+//    //    joint_vector[4] = 1.567635;
+//    //    joint_vector[5] = -4.72955457;
+//
+//
+//
+//    ur10e_traj->cal_end_point_to_rad(desired_pose_matrix);
+//
+//
+//    for(int num = 0; num <6 ; num ++)
+//     {
+//       desired_pose_vector[num] = ur10e_traj->get_traj_results()(num,0);
+//     }
+//
+//    cout <<"trajectory test" << "\n\n" ;
+//    cout << "x" << desired_pose_vector[0] << "\n\n" ;
+//    cout << "y" << desired_pose_vector[1] << "\n\n" ;
+//    cout << "z" << desired_pose_vector[2] << "\n\n" ;
+//
+//    cout << "r" << desired_pose_vector[3] << "\n\n" ;
+//    cout << "p" << desired_pose_vector[4] << "\n\n" ;
+//    cout << "y" << desired_pose_vector[5] << "\n\n" ;
+//
+//
+//    //ur10e_kinematics->calculate_forward_kinematics(joint_positions);
+//    ur10e_kinematics->calculate_inverse_kinematics(desired_pose_vector);
+//    ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
+//
+//
+//
+//    tool_acc_data = ur10e_kinematics->tf_base_to_tool(tool_acc_data);
+//    tool_estimation->set_acc_input_data(tool_acc_data);
+//    tool_estimation->set_pose_input_data(tcp_pose);
+//    tool_estimation->set_speed_input_data(tcp_speed);
+//    tool_estimation->calculate_angular_acc();
+//
+//    ft_filter->filter_processing(raw_force_torque_data);
+//
+//    //contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
+//
+//    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"x");
+//    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"y");
+//    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"z");
+//    //
+//    contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
+//    //
+//    //    filtered_force_torque_data_msg.data.push_back(tool_acc_data(0,0));
+//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
+//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(2,0));
+//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(3,0));
+//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(4,0));
+//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(5,0));
+//    //
+//    //
+//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(0,0));
+//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(1,0));
+//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(2,0));
+//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(3,0));
+//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(4,0));
+//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(5,0));
+//    //
+//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
+//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
+//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
+//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(3,0));
+//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(4,0));
+//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(5,0));
+//    //
+//    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(0,0));
+//    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(1,0));
+//    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(2,0));
+//    //
+//    //    filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
+//    //    filtered_force_torque_data_msg.data.clear();
+//
+//    gazebo_shoulder_pan_position_msg.data = ur10e_kinematics->get_ik_joint_results()[0];
+//    gazebo_shoulder_lift_position_msg.data = ur10e_kinematics->get_ik_joint_results()[1];
+//    gazebo_elbow_position_msg.data = ur10e_kinematics->get_ik_joint_results()[2];
+//    gazebo_wrist_1_position_msg.data = ur10e_kinematics->get_ik_joint_results()[3];
+//    gazebo_wrist_2_position_msg.data = ur10e_kinematics->get_ik_joint_results()[4];
+//    gazebo_wrist_3_position_msg.data = ur10e_kinematics->get_ik_joint_results()[5];
+//
+//    gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
+//    gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
+//    gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
+//    gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
+//    gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
+//    gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+//}
 int main (int argc, char **argv)
 {
   printf("Force Torque Sensor Test Node Start \n");
@@ -344,10 +495,14 @@ int main (int argc, char **argv)
   // ros subsrcibe
   ros::Subscriber raw_force_torque_data_sub;
   ros::Subscriber zero_command_sub;
+  ros::Subscriber command_sub;
 
   //raw_force_torque_data_sub = n.subscribe("/sdu/ur10e/raw_force_torque_data", 10, RawForceTorqueDataMsgCallBack);
   raw_force_torque_data_sub = n.subscribe("/chatter", 10, RawForceTorqueDataMsgCallBack);
+  command_sub = n.subscribe("/command", 10, CommandDataMsgCallBack);
   //zero_command_sub          = n.subscribe("/sdu/zero", 10, ZeroCommandMsgCallBack);
+
+  //ros::Timer timer_control = n.createTimer(ros::Duration(0.01), controlFunction);
 
   //system conffiguration
   std::string ft_init_data_path;
@@ -359,7 +514,28 @@ int main (int argc, char **argv)
   tool_estimation->set_parameters(control_time, 4.118);
   zero_command = false;
 
+  usleep(3000000);
+
+  gazebo_shoulder_pan_position_msg.data = desired_pose_vector[0];
+  gazebo_shoulder_lift_position_msg.data = desired_pose_vector[1];
+  gazebo_elbow_position_msg.data = desired_pose_vector[2];
+  gazebo_wrist_1_position_msg.data = desired_pose_vector[3];
+  gazebo_wrist_2_position_msg.data = desired_pose_vector[4];
+  gazebo_wrist_3_position_msg.data = desired_pose_vector[5];
+
+
+  gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
+  gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
+  gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
+  gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
+  gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
+  gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+  ros::spinOnce();
+
   printf("waiting initialize\n");
+
+
+
   usleep(3000000);
 
   //real time task
@@ -368,7 +544,7 @@ int main (int argc, char **argv)
 
   printf("Starting cyclic task...\n");
   sprintf(str, "real time control loop task start");
-  rt_task_create(&loop_task, str, 0, 40, 0);//Create the real time task
+  rt_task_create(&loop_task, str, 0, 99, 0);//Create the real time task
   rt_task_start(&loop_task, &loop_task_proc, 0);//Since task starts in suspended mode, start task
 
   pause();
@@ -378,6 +554,15 @@ int main (int argc, char **argv)
   out.close();
   cout << "complete and save" << "\n\n";
   printf("exiting safely\n");
+
+//  while(ros::ok())
+//  {
+//    ros::spinOnce();
+//  }
+//
+//  out.close();
+//  cout << "complete and save" << "\n\n";
+//  printf("exiting safely\n");
 
 
 
