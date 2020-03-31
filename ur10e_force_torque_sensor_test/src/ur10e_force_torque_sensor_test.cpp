@@ -74,6 +74,7 @@ void loop_task_proc(void *arg)
     desired_pose_matrix(num,1) =  desired_pose_vector[num];
     ur10e_traj->current_pose_change(num,0) = desired_pose_vector[num];
   }
+
   ur10e_traj->cal_end_point_tra_px->current_pose = desired_pose_vector[0];
   ur10e_traj->cal_end_point_tra_py->current_pose = desired_pose_vector[1];
   ur10e_traj->cal_end_point_tra_pz->current_pose = desired_pose_vector[2];
@@ -97,12 +98,12 @@ void loop_task_proc(void *arg)
     //    tcp_speed_data = rtde_receive.getActualTCPSpeed();
 
 
-    //    for(int var = 0; var < 6; var ++)
-    //    {
-    //      raw_force_torque_data(var,0) = force_data[var];
-    //      tcp_pose(var,0) = tcp_pose_data[var];
-    //      tcp_speed(var,0) = tcp_speed_data[var];
-    //    }
+        for(int var = 0; var < 6; var ++)
+        {
+          //raw_force_torque_data(var,0) = force_data[var];
+          tcp_pose(var,0) = 0;
+          //tcp_speed(var,0) = tcp_speed_data[var];
+        }
     //    raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
     //    raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
     //    raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
@@ -119,10 +120,7 @@ void loop_task_proc(void *arg)
     //    joint_vector[4] = 1.567635;
     //    joint_vector[5] = -4.72955457;
 
-
-
     ur10e_traj->cal_end_point_to_rad(desired_pose_matrix);
-
 
     for(int num = 0; num <6 ; num ++)
      {
@@ -143,8 +141,6 @@ void loop_task_proc(void *arg)
     ur10e_kinematics->calculate_inverse_kinematics(desired_pose_vector);
     ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
 
-
-
     tool_acc_data = ur10e_kinematics->tf_base_to_tool(tool_acc_data);
     tool_estimation->set_acc_input_data(tool_acc_data);
     tool_estimation->set_pose_input_data(tcp_pose);
@@ -153,42 +149,40 @@ void loop_task_proc(void *arg)
 
     ft_filter->filter_processing(raw_force_torque_data);
 
-    //contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
-
     tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"x");
     tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"y");
     tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"z");
     //
-    contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
+    contacted_force_data = tool_estimation->get_contacted_force(tcp_pose,tcp_pose,raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
     //
-    //    filtered_force_torque_data_msg.data.push_back(tool_acc_data(0,0));
-    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
-    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(2,0));
-    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(3,0));
-    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(4,0));
-    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(5,0));
+    //filtered_force_torque_data_msg.data.push_back(tool_acc_data(0,0));
+    //filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
+    //filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(2,0));
+    //filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(3,0));
+    //filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(4,0));
+    //filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(5,0));
     //
     //
-    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(0,0));
-    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(1,0));
-    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(2,0));
-    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(3,0));
-    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(4,0));
-    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(5,0));
+    //filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(0,0));
+    //filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(1,0));
+    //filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(2,0));
+    //filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(3,0));
+    //filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(4,0));
+    //filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(5,0));
     //
-    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
-    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
-    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
-    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(3,0));
-    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(4,0));
-    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(5,0));
+    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
+    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
+    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
+    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(3,0));
+    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(4,0));
+    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(5,0));
     //
-    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(0,0));
-    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(1,0));
-    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(2,0));
+    //filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(0,0));
+    //filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(1,0));
+    //filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(2,0));
     //
-    //    filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
-    //    filtered_force_torque_data_msg.data.clear();
+    //filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
+    //filtered_force_torque_data_msg.data.clear();
 
     gazebo_shoulder_pan_position_msg.data = ur10e_kinematics->get_ik_joint_results()[0];
     gazebo_shoulder_lift_position_msg.data = ur10e_kinematics->get_ik_joint_results()[1];
@@ -375,114 +369,13 @@ void initialize()
   ur10e_traj->cal_end_point_tra_alpha->current_pose = -180*DEGREE2RADIAN;
 }
 
-//void controlFunction(const ros::TimerEvent&)
-//{
-//
-//
-//    time_count += 0.01;
-//
-//    tool_acc_data = raw_tool_acc_data - tool_estimation->get_offset_data();
-//    // test
-//    //    joint_vector[0] = 3.1201586;
-//    //    joint_vector[1] = -1.26581597;
-//    //    joint_vector[2] = -1.98288117;
-//    //
-//    //    joint_vector[3] = -1.4641402;
-//    //    joint_vector[4] = 1.567635;
-//    //    joint_vector[5] = -4.72955457;
-//
-//
-//
-//    ur10e_traj->cal_end_point_to_rad(desired_pose_matrix);
-//
-//
-//    for(int num = 0; num <6 ; num ++)
-//     {
-//       desired_pose_vector[num] = ur10e_traj->get_traj_results()(num,0);
-//     }
-//
-//    cout <<"trajectory test" << "\n\n" ;
-//    cout << "x" << desired_pose_vector[0] << "\n\n" ;
-//    cout << "y" << desired_pose_vector[1] << "\n\n" ;
-//    cout << "z" << desired_pose_vector[2] << "\n\n" ;
-//
-//    cout << "r" << desired_pose_vector[3] << "\n\n" ;
-//    cout << "p" << desired_pose_vector[4] << "\n\n" ;
-//    cout << "y" << desired_pose_vector[5] << "\n\n" ;
-//
-//
-//    //ur10e_kinematics->calculate_forward_kinematics(joint_positions);
-//    ur10e_kinematics->calculate_inverse_kinematics(desired_pose_vector);
-//    ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
-//
-//
-//
-//    tool_acc_data = ur10e_kinematics->tf_base_to_tool(tool_acc_data);
-//    tool_estimation->set_acc_input_data(tool_acc_data);
-//    tool_estimation->set_pose_input_data(tcp_pose);
-//    tool_estimation->set_speed_input_data(tcp_speed);
-//    tool_estimation->calculate_angular_acc();
-//
-//    ft_filter->filter_processing(raw_force_torque_data);
-//
-//    //contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
-//
-//    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"x");
-//    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"y");
-//    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"z");
-//    //
-//    contacted_force_data = tool_estimation->get_contacted_force(raw_force_torque_data - ft_filter->get_offset_data(), tool_acc_data);
-//    //
-//    //    filtered_force_torque_data_msg.data.push_back(tool_acc_data(0,0));
-//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
-//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(2,0));
-//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(3,0));
-//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(4,0));
-//    //    filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(5,0));
-//    //
-//    //
-//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(0,0));
-//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(1,0));
-//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(2,0));
-//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(3,0));
-//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(4,0));
-//    //    filtered_force_torque_data_msg.data.push_back(ft_filter->get_filtered_data()(5,0));
-//    //
-//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
-//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
-//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
-//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(3,0));
-//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(4,0));
-//    //    filtered_force_torque_data_msg.data.push_back(contacted_force_data(5,0));
-//    //
-//    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(0,0));
-//    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(1,0));
-//    //    filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(2,0));
-//    //
-//    //    filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
-//    //    filtered_force_torque_data_msg.data.clear();
-//
-//    gazebo_shoulder_pan_position_msg.data = ur10e_kinematics->get_ik_joint_results()[0];
-//    gazebo_shoulder_lift_position_msg.data = ur10e_kinematics->get_ik_joint_results()[1];
-//    gazebo_elbow_position_msg.data = ur10e_kinematics->get_ik_joint_results()[2];
-//    gazebo_wrist_1_position_msg.data = ur10e_kinematics->get_ik_joint_results()[3];
-//    gazebo_wrist_2_position_msg.data = ur10e_kinematics->get_ik_joint_results()[4];
-//    gazebo_wrist_3_position_msg.data = ur10e_kinematics->get_ik_joint_results()[5];
-//
-//    gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
-//    gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
-//    gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
-//    gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
-//    gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
-//    gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
-//}
 int main (int argc, char **argv)
 {
   printf("Force Torque Sensor Test Node Start \n");
   ros::init(argc, argv, "talker");
   ros::NodeHandle n;
-  //ros publisher
 
+  //ros publisher
   filtered_force_torque_data_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/chatter", 10);
 
   gazebo_shoulder_pan_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_pan_position/command", 10);
@@ -502,7 +395,6 @@ int main (int argc, char **argv)
   command_sub = n.subscribe("/command", 10, CommandDataMsgCallBack);
   //zero_command_sub          = n.subscribe("/sdu/zero", 10, ZeroCommandMsgCallBack);
 
-  //ros::Timer timer_control = n.createTimer(ros::Duration(0.01), controlFunction);
 
   //system conffiguration
   std::string ft_init_data_path;
@@ -511,18 +403,18 @@ int main (int argc, char **argv)
   initialize();
   ft_filter->initialize(ft_init_data_path);
   tool_estimation->initialize();
-  tool_estimation->set_parameters(control_time, 4.118);
+  tool_estimation->set_parameters(control_time, 4.07);
   zero_command = false;
 
   usleep(3000000);
 
-  gazebo_shoulder_pan_position_msg.data = desired_pose_vector[0];
-  gazebo_shoulder_lift_position_msg.data = desired_pose_vector[1];
-  gazebo_elbow_position_msg.data = desired_pose_vector[2];
-  gazebo_wrist_1_position_msg.data = desired_pose_vector[3];
-  gazebo_wrist_2_position_msg.data = desired_pose_vector[4];
-  gazebo_wrist_3_position_msg.data = desired_pose_vector[5];
-
+  //gazebo
+  gazebo_shoulder_pan_position_msg.data = 3.1213190230795913;
+  gazebo_shoulder_lift_position_msg.data = -1.2650450021126538;
+  gazebo_elbow_position_msg.data = -1.9836958306426968;
+  gazebo_wrist_1_position_msg.data = -1.4640438428275298;
+  gazebo_wrist_2_position_msg.data = 1.5707963268419363;
+  gazebo_wrist_3_position_msg.data = 1.5505226962847685;
 
   gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
   gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
