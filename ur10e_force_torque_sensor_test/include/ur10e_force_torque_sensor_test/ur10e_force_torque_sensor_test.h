@@ -40,8 +40,8 @@
 #include "sdu_sensor/tool_estimation.h"
 #include "sdu_math/end_point_to_rad_cal.h"
 
-#define CLOCK_RES 1e-6 //Clock resolution is 1 us by default 1e-9
-#define LOOP_PERIOD 5e6 //Expressed in ticks // 10ms control time
+#define CLOCK_RES 1e-9 //Clock resolution is 1 us by default 1e-9
+#define LOOP_PERIOD 2e6 //Expressed in ticks // 10ms control time
 //RTIME period = 1000000000;
 RT_TASK loop_task;
 
@@ -62,6 +62,7 @@ Eigen::MatrixXd raw_tool_acc_data;
 Eigen::MatrixXd tool_acc_data;
 Eigen::MatrixXd contacted_force_data;
 Eigen::MatrixXd tcp_pose;
+Eigen::MatrixXd tcp_target_pose;
 Eigen::MatrixXd tcp_speed;
 Eigen::MatrixXd desired_pose_matrix;
 
@@ -73,6 +74,7 @@ double time_count;
 string data_line;
 string getActualQ;
 string getActualTCPPose;
+string getTargetTCPPose;
 string getActualTCPForce;
 string getActualToolAccelerometer;
 string getFilteredForce;
