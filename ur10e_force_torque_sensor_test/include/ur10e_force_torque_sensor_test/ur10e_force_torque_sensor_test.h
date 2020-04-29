@@ -104,7 +104,7 @@ std_msgs::Float64 gazebo_wrist_3_position_msg;
 //void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg);
 //void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
 
-void CommandDataMsgCallBack (const std_msgs::Float64::ConstPtr& msg);
+void CommandDataMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg);
 
 //for ros test
 std::vector<double> joint_vector;
