@@ -21,6 +21,19 @@
 #include <ur_rtde/rtde_receive_interface.h>
 #include <ur_rtde/rtde_control_interface.h>
 
+//rw_robwork
+#include <rw/invkin/ClosedFormIKSolverUR.hpp>
+#include <rw/invkin/JacobianIKSolver.hpp>
+#include <rw/kinematics.hpp>
+#include <rw/loaders/WorkCellLoader.hpp>
+#include <rw/math.hpp>
+#include <rw/models/SerialDevice.hpp>
+#include <rw/models/WorkCell.hpp>
+#include <rw/pathplanning/PlannerConstraint.hpp>
+#include <rw/pathplanning/QSampler.hpp>
+#include <rw/proximity/CollisionDetector.hpp>
+#include <rwlibs/proximitystrategies/ProximityStrategyFactory.hpp>
+
 //xenomai rt system
 #include <unistd.h>
 #include <signal.h>
@@ -29,6 +42,8 @@
 #include <sys/types.h>
 #include <alchemy/task.h>
 #include <alchemy/timer.h>
+
+
 
 //ros message system
 #include "ros/ros.h"
@@ -85,6 +100,9 @@ string getActualToolAcc;
 //ros
 ros::Publisher filtered_force_torque_data_pub;
 
+ros::Publisher joint_cur_value_pub;
+ros::Publisher ee_cur_value_pub;
+
 ros::Publisher gazebo_shoulder_pan_position_pub;
 ros::Publisher gazebo_shoulder_lift_position_pub;
 ros::Publisher gazebo_elbow_position_pub;
@@ -93,6 +111,8 @@ ros::Publisher gazebo_wrist_2_position_pub;
 ros::Publisher gazebo_wrist_3_position_pub;
 
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
+std_msgs::Float64MultiArray joint_cur_value_msg;
+std_msgs::Float64MultiArray ee_cur_value_msg;
 
 std_msgs::Float64 gazebo_shoulder_pan_position_msg;
 std_msgs::Float64 gazebo_shoulder_lift_position_msg;
