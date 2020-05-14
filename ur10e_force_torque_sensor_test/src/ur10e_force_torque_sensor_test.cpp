@@ -119,8 +119,6 @@ void loop_task_proc(void *arg)
   ur10e_traj->cal_end_point_tra_alpha->current_pose = -180*DEGREE2RADIAN;
 
 
-  //desired_pose_matrix(2,1) = 0.7;
-
   //Start the task loop
   while(1){
     if((rt_timer_read() - tstart)/1000000.0  - previous_t > 2.15) //2ms
@@ -180,8 +178,14 @@ void loop_task_proc(void *arg)
     //ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
     //ur10e_kinematics->calculate_inverse_kinematics(desired_pose_vector);
 
+    double x,y,z;
+    x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
+    y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
+    z = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(3,0);
+
+
     const Transform3D<> Tdesired(Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]),
-        EAA<>(-Pi, 0, 0).toRotation3D());
+        EAA<>(x, y, z).toRotation3D());
     const std::vector<Q> solutions = solver.solve(Tdesired, state);
 
 
@@ -189,7 +193,7 @@ void loop_task_proc(void *arg)
     //const std::vector<Q> solutions = solver.solve(Tdesired, state);
 
 
-    //ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
+    ur10e_kinematics->calculate_forward_kinematics(solutions[3].toStdVector());
 
     // cout << "TF" << ur10e_kinematics->get_tf_base_to_tool()<< "\n\n" ;
 
@@ -248,6 +252,10 @@ void loop_task_proc(void *arg)
 
     for(int num= 0; num  < 3; num ++)
       ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
+
+    for(int num= 0; num  < 3; num ++)
+      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(x,y,z)(num,0));
+    ee_cur_value_msg.data.push_back(desired_pose_matrix(0,7));
 
 
     gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
@@ -353,7 +361,17 @@ void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& 
 void CommandDataMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg)
 {
   for(int num = 0; num < 6 ; num++)
+  {
     desired_pose_matrix(num,1) = msg->data[num];
+  }
+  if(msg->data[6] <= 0)
+    return;
+
+  for(int num = 0; num < 6 ; num++)
+  {
+    desired_pose_matrix(num,7) =  msg->data[6];
+  }
+
 }
 void initialize()
 {
