@@ -257,7 +257,6 @@ void loop_task_proc(void *arg)
       ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(x,y,z)(num,0));
     ee_cur_value_msg.data.push_back(desired_pose_matrix(0,7));
 
-
     gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
     gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
     gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
@@ -381,6 +380,8 @@ void initialize()
   ur10e_traj = std::make_shared<CalRad>();
 
   control_time = 0.002;
+  ur10e_traj->set_control_time(control_time);
+
   raw_force_torque_data.resize(6,1);
   raw_force_torque_data.fill(0);
 
