@@ -44,20 +44,15 @@ void loop_task_proc(void *arg)
   //    std::cout << " " << solutions[i].toStdVector()<< std::endl;
   //  }
 
-
-
-
   RT_TASK *curtask;
   RT_TASK_INFO curtaskinfo;
-  int iret = 0;
 
-  RTIME tstart, now;
+  RTIME tstart;
 
   curtask = rt_task_self();
   rt_task_inquire(curtask, &curtaskinfo);
-  int ctr = 0;
 
-  printf("Starting task %s with period of 2 ms ....\n", curtaskinfo.name);
+  printf("Starting task %s with period of %f ms ....\n", curtaskinfo.name, control_time*1000);
 
   //Make the task periodic with a specified loop period
   rt_task_set_periodic(NULL, TM_NOW, LOOP_PERIOD);
@@ -105,25 +100,15 @@ void loop_task_proc(void *arg)
   //cout <<  tool_estimation->get_offset_data() << "\n\n";
 
   double previous_t = 0.0;
-  //
-  for(int num = 0; num <6 ; num ++)
-  {
-    desired_pose_matrix(num,0) =  desired_pose_vector[num];
-    desired_pose_matrix(num,1) =  desired_pose_vector[num];
-    ur10e_traj->current_pose_change(num,0) = desired_pose_vector[num];
-  }
 
-  ur10e_traj->cal_end_point_tra_px->current_pose = desired_pose_vector[0];
-  ur10e_traj->cal_end_point_tra_py->current_pose = desired_pose_vector[1];
-  ur10e_traj->cal_end_point_tra_pz->current_pose = desired_pose_vector[2];
-  ur10e_traj->cal_end_point_tra_alpha->current_pose = -180*DEGREE2RADIAN;
+  ur10e_task->load_task_motion("/home/yik/sdu_ws/SDU-UR10E-Estimation/config/test2.yaml");
 
 
   //Start the task loop
   while(1){
-    if((rt_timer_read() - tstart)/1000000.0  - previous_t > 2.15) //2ms
+    if((rt_timer_read() - tstart)/1000000.0  - previous_t > (control_time*1000 + 0.15)) //
     {
-      printf("delayed Loop time: %.5f ms\n",((rt_timer_read() - tstart)/1000000.0  - previous_t) - 2);
+      printf("delayed Loop time: %.5f ms\n",((rt_timer_read() - tstart)/1000000.0  - previous_t) - control_time*1000);
     }
     previous_t = (rt_timer_read() - tstart)/1000000.0;
 
@@ -146,8 +131,6 @@ void loop_task_proc(void *arg)
     //raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
     //raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
 
-    time_count += 0.002;
-
     //tool_acc_data = raw_tool_acc_data; //- tool_estimation->get_offset_data();
     // test
     //    joint_vector[0] = 3.1201586;
@@ -158,12 +141,6 @@ void loop_task_proc(void *arg)
     //    joint_vector[4] = 1.567635;
     //    joint_vector[5] = -4.72955457;
 
-    ur10e_traj->cal_end_point_to_rad(desired_pose_matrix);
-
-    for(int num = 0; num <6 ; num ++)
-    {
-      desired_pose_vector[num] = ur10e_traj->get_traj_results()(num,0);
-    }
 
     //        cout <<"trajectory test" << "\n\n" ;
     //        cout << "x" << desired_pose_vector[0] << "\n\n" ;
@@ -177,6 +154,14 @@ void loop_task_proc(void *arg)
 
     //ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
     //ur10e_kinematics->calculate_inverse_kinematics(desired_pose_vector);
+
+    //ur10e_task->set_point(desired_pose_matrix(0,1),desired_pose_matrix(1,1),desired_pose_matrix(2,1),
+    //    desired_pose_matrix(3,1),desired_pose_matrix(4,1),desired_pose_matrix(5,1), motion_time);
+
+
+    ur10e_task->run_task_motion();
+    desired_pose_vector = ur10e_task->get_current_pose();
+
 
     double x,y,z;
     x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
@@ -368,7 +353,7 @@ void CommandDataMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg)
 
   for(int num = 0; num < 6 ; num++)
   {
-    desired_pose_matrix(num,7) =  msg->data[6];
+    motion_time =  msg->data[6];
   }
 
 }
@@ -378,9 +363,19 @@ void initialize()
   tool_estimation = std::make_shared<ToolEstimation>();
   ur10e_kinematics = std::make_shared<Kinematics>();
   ur10e_traj = std::make_shared<CalRad>();
+  ur10e_task = std::make_shared<TaskMotion>();
 
+
+  //kinematics
+  ur10e_kinematics->set_dh_parameter(0.1807, -0.6127, -0.57155, 0.17415, 0.11985, 0.11655);
+
+  // fifth order traj
   control_time = 0.002;
   ur10e_traj->set_control_time(control_time);
+
+  ur10e_task->initialize(control_time);
+  ur10e_task->set_initial_pose(-0.5, 0.184324, 0.5875, -180*DEGREE2RADIAN, 0, 0);
+  motion_time = 5;
 
   raw_force_torque_data.resize(6,1);
   raw_force_torque_data.fill(0);
@@ -405,25 +400,25 @@ void initialize()
   desired_pose_matrix.resize(6,8);
   desired_pose_matrix.fill(0);
 
+  desired_pose_matrix(0,1) = -0.5;
+  desired_pose_matrix(1,1) = 0.184324;
+  desired_pose_matrix(2,1) = 0.5875;
+  desired_pose_matrix(3,1) = -180*DEGREE2RADIAN;
+  desired_pose_matrix(4,1) = 0;
+  desired_pose_matrix(5,1) = 0;
+
   // initial pose load
-  desired_pose_matrix(0,7) = 5;
-  desired_pose_matrix(1,7) = 5;
-  desired_pose_matrix(2,7) = 5;
-  desired_pose_matrix(3,7) = 5;
-  desired_pose_matrix(4,7) = 5;
-  desired_pose_matrix(5,7) = 5;
 
   joint_vector.resize(6);
   desired_pose_vector.resize(6);
 
-  desired_pose_vector[0] = -0.5;
-  desired_pose_vector[1] = 0.184324;
-  desired_pose_vector[2] = 0.5875;
-  desired_pose_vector[3] = -180*DEGREE2RADIAN;
-  desired_pose_vector[4] = 0;
-  desired_pose_vector[5] = 0;
+  for(int num = 0; num < 6; num ++)
+  {
+    desired_pose_vector[num] = 0;
+  }
 
-  ur10e_kinematics->set_dh_parameter(0.1807, -0.6127, -0.57155, 0.17415, 0.11985, 0.11655);
+
+
 
   //data variables define
   getTargetTCPPose = " target_tcp_pose_x target_tcp_pose_y target_tcp_pose_z target_tcp_pose_r target_tcp_pose_p target_tcp_pose_y";
@@ -450,17 +445,6 @@ void initialize()
   getActualToolSpeed = "";
   getActualToolAcc = "";
   getActualQ = "";
-
-  for(int num = 0; num <6 ; num ++)
-  {
-    desired_pose_matrix(num,0) =  desired_pose_vector[num];
-    desired_pose_matrix(num,1) =  desired_pose_vector[num];
-    ur10e_traj->current_pose_change(num,0) = desired_pose_vector[num];
-  }
-  ur10e_traj->cal_end_point_tra_px->current_pose = desired_pose_vector[0];
-  ur10e_traj->cal_end_point_tra_py->current_pose = desired_pose_vector[1];
-  ur10e_traj->cal_end_point_tra_pz->current_pose = desired_pose_vector[2];
-  ur10e_traj->cal_end_point_tra_alpha->current_pose = -180*DEGREE2RADIAN;
 }
 
 int main (int argc, char **argv)
@@ -543,7 +527,7 @@ int main (int argc, char **argv)
 
   printf("Starting cyclic task...\n");
   sprintf(str, "real time control loop task start");
-  rt_task_create(&loop_task, str, 0, 99, 0);//Create the real time task
+  rt_task_create(&loop_task, str, 0, 50, 0);//Create the real time task
   rt_task_start(&loop_task, &loop_task_proc, 0);//Since task starts in suspended mode, start task
 
   std::cout << COLOR_GREEN << "Real time task loop was created!" << COLOR_RESET << std::endl;

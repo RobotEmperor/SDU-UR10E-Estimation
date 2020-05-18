@@ -37,8 +37,12 @@ public:
   void initialize(double control_time_);
   void robot_initialize(); // joint space
   void load_task_motion(std::string path_);
+
   void run_task_motion();
   void clear_task_motion();
+
+  void set_point(double x, double y, double z, double roll, double pitch, double yaw, double time);
+  void set_initial_pose(double x, double y, double z, double roll, double pitch, double yaw);
 
   std::vector<double> get_current_pose();
 
@@ -47,6 +51,9 @@ public:
 private:
 
   int number_of_point;
+  int all_point;
+  int current_point;
+  bool check_change;
 
   std::map<int, std::vector<double>> motion_start_time_vector;
   std::map<int, std::vector<double>> motion_task_vector;

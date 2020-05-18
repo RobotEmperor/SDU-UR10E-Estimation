@@ -43,8 +43,6 @@
 #include <alchemy/task.h>
 #include <alchemy/timer.h>
 
-
-
 //ros message system
 #include "ros/ros.h"
 #include "std_msgs/Float64MultiArray.h"
@@ -54,9 +52,10 @@
 #include "sdu_sensor/ft_filter.h"
 #include "sdu_sensor/tool_estimation.h"
 #include "sdu_math/end_point_to_rad_cal.h"
+#include "ur10e_force_torque_sensor_test/task_motion.h"
 
 #define CLOCK_RES 1e-9 //Clock resolution is 1 us by default 1e-9
-#define LOOP_PERIOD 2e6 //Expressed in ticks // 10ms control time
+#define LOOP_PERIOD 2e6 //Expressed in ticks // 2ms control time
 //RTIME period = 1000000000;
 RT_TASK loop_task;
 
@@ -69,6 +68,7 @@ std::shared_ptr<FTfilter> ft_filter;
 std::shared_ptr<ToolEstimation> tool_estimation;
 std::shared_ptr<Kinematics> ur10e_kinematics;
 std::shared_ptr<CalRad> ur10e_traj;
+std::shared_ptr<TaskMotion> ur10e_task;
 
 
 
@@ -84,6 +84,7 @@ Eigen::MatrixXd desired_pose_matrix;
 double control_time;
 double sampling_time;
 double time_count;
+double motion_time;
 
 //real time data save
 string data_line;
