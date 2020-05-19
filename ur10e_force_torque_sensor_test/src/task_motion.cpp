@@ -19,11 +19,10 @@ TaskMotion::~TaskMotion()
 
 void TaskMotion::initialize(double control_time_)
 {
-  ur10e_traj = std::make_shared<CalRad>();
-  ur10e_traj->set_control_time(control_time_);
+  robot_traj = std::make_shared<CalRad>();
+  robot_traj->set_control_time(control_time_);
 
-  number_of_point = 0;
-  current_point = -1;
+  current_point = -1; // wanna count from 0
   all_point = -1;
   check_change = false;
 
@@ -64,61 +63,81 @@ void TaskMotion::load_task_motion(std::string path_)
   YAML::Node motion_task_node = doc["motion_task"];
 
   std::vector<double> temp_motion_start_time_vector;
-  std::vector<double> temp_motion_task_vector;
+  std::vector<double> temp_motion_task_pose_vector;
+  std::vector<double> temp_motion_task_vel_vector;
 
+  int point_numbers;
+  point_numbers = 0;
+
+  //time
   for (YAML::iterator it = motion_start_time_node.begin(); it != motion_start_time_node.end(); ++it)
   {
-    number_of_point = it->first.as<int>();
+    point_numbers = it->first.as<int>();
     temp_motion_start_time_vector.push_back(it->second[0].as<double>());
-    motion_start_time_vector[number_of_point] = temp_motion_start_time_vector;
+    motion_start_time_vector[point_numbers] = temp_motion_start_time_vector;
     temp_motion_start_time_vector.clear();
   }
+  //points
   for (YAML::iterator it = motion_task_node.begin(); it != motion_task_node.end(); ++it)
   {
-    number_of_point = it->first.as<int>();
+    point_numbers = it->first.as<int>();
     for(int num = 0; num < 3; num++)
     {
-      temp_motion_task_vector.push_back(it->second[num].as<double>());
+      temp_motion_task_pose_vector.push_back(it->second[num].as<double>());
     }
     for(int num = 3; num < 6; num++)
     {
-      temp_motion_task_vector.push_back(it->second[num].as<double>()*DEGREE2RADIAN);
+      temp_motion_task_pose_vector.push_back(it->second[num].as<double>()*DEGREE2RADIAN);
     }
-    motion_task_vector[number_of_point] = temp_motion_task_vector;
-    temp_motion_task_vector.clear();
+    motion_task_pose_vector[point_numbers] = temp_motion_task_pose_vector;
+    temp_motion_task_pose_vector.clear();
+
     all_point ++;
   }
+  //velocity
+  for(int num = 0; num < 6; num++)
+    temp_motion_task_vel_vector.push_back(0);
+
+  for(int num = 0; num < all_point+1 ; num++)
+  {
+    motion_task_init_vel_vector[num] = temp_motion_task_vel_vector;
+    motion_task_final_vel_vector[num] = temp_motion_task_vel_vector;
+  }
+  temp_motion_task_vel_vector.clear();
 }
 void TaskMotion::run_task_motion()
 {
 
-  ur10e_traj->cal_end_point_to_rad(desired_pose_matrix);
+  robot_traj->cal_end_point_to_rad(desired_pose_matrix);
   for(int num = 0; num <6 ; num ++)
   {
-    current_pose_vector[num] = ur10e_traj->get_traj_results()(num,0);
+    current_pose_vector[num] = robot_traj->get_traj_results()(num,0);
   }
 
-  if(ur10e_traj->is_moving_check !=true )// not during motion --> can recieve first or new point.
+  if(robot_traj->is_moving_check !=true )// not during motion --> can recieve first or new point.
   {
-    if(ur10e_traj->is_moving_check != check_change) // point change is detected. or stop the robot
+    if(robot_traj->is_moving_check != check_change) // point change is detected. or stop the robot
     {
       current_point ++;
       std::cout << current_point << std::endl;
     }
-//    else // point change is not detected or stop the robot
-//    {
-//    }
 
     if(current_point > all_point)
     {
-      check_change = ur10e_traj->is_moving_check;
+      check_change = robot_traj->is_moving_check;
       return;
     }
 
+    calculate_init_final_velocity(current_point);
+
     for(int num = 0; num <6; num ++)
     {
-      desired_pose_matrix(num,1) = motion_task_vector[current_point][num];
-      //desired_pose_matrix(num,7) = motion_start_time_vector[current_point][num];
+      desired_pose_matrix(num,1) = motion_task_pose_vector[current_point][num];
+
+      desired_pose_matrix(num,2) = motion_task_init_vel_vector[0][num];
+      desired_pose_matrix(num,3) = motion_task_final_vel_vector[current_point][num];
+
+      desired_pose_matrix(num,7) = motion_start_time_vector[current_point][0];
     }
     // change the point
   }
@@ -127,7 +146,7 @@ void TaskMotion::run_task_motion()
 
   }
 
-  check_change = ur10e_traj->is_moving_check;
+  check_change = robot_traj->is_moving_check;
 }
 std::vector<double> TaskMotion::get_current_pose()
 {
@@ -147,15 +166,15 @@ void TaskMotion::set_initial_pose(double x, double y, double z, double roll, dou
   {
     desired_pose_matrix(num,0) =  current_pose_vector[num];
     desired_pose_matrix(num,1) =  current_pose_vector[num];
-    ur10e_traj->current_pose_change(num,0) = current_pose_vector[num];
+    robot_traj->current_pose_change(num,0) = current_pose_vector[num];
   }
 
-  ur10e_traj->cal_end_point_tra_px->current_pose = current_pose_vector[0];
-  ur10e_traj->cal_end_point_tra_py->current_pose = current_pose_vector[1];
-  ur10e_traj->cal_end_point_tra_pz->current_pose = current_pose_vector[2];
-  ur10e_traj->cal_end_point_tra_alpha->current_pose = current_pose_vector[3];
-  ur10e_traj->cal_end_point_tra_betta->current_pose = current_pose_vector[4];
-  ur10e_traj->cal_end_point_tra_kamma->current_pose = current_pose_vector[5];
+  robot_traj->cal_end_point_tra_px->current_pose = current_pose_vector[0];
+  robot_traj->cal_end_point_tra_py->current_pose = current_pose_vector[1];
+  robot_traj->cal_end_point_tra_pz->current_pose = current_pose_vector[2];
+  robot_traj->cal_end_point_tra_alpha->current_pose = current_pose_vector[3];
+  robot_traj->cal_end_point_tra_betta->current_pose = current_pose_vector[4];
+  robot_traj->cal_end_point_tra_kamma->current_pose = current_pose_vector[5];
 }
 void TaskMotion::set_point(double x, double y, double z, double roll, double pitch, double yaw, double time)
 {
@@ -176,6 +195,66 @@ void TaskMotion::clear_task_motion()
   all_point = -1;
   current_point = -1;
   motion_start_time_vector.clear();
-  motion_task_vector.clear();
+  motion_task_pose_vector.clear();
+}
+
+double TaskMotion::calculate_velocity(double first_point,double second_point, double interval_time)
+{
+  return (second_point - first_point)/interval_time;
+}
+void TaskMotion::calculate_init_final_velocity(int point_number)
+{
+  static double first_vel = 0;
+  static double second_vel = 0;
+
+  if(all_point < 1) // in case of one point
+  {
+    for(int var = 0; var <6 ; var++)
+    {
+      motion_task_init_vel_vector[0][var] = 0;
+      motion_task_final_vel_vector[0][var] = 0;
+    }
+    return;
+  }
+
+  if(point_number == 0) // start phase
+  {
+    for(int var = 0; var <6 ; var++)
+    {
+      first_vel  = calculate_velocity(current_pose_vector[var],motion_task_pose_vector[0][var], motion_start_time_vector[0][0]);
+      second_vel = calculate_velocity(motion_task_pose_vector[0][var],motion_task_pose_vector[1][var], motion_start_time_vector[1][0]);
+
+      motion_task_init_vel_vector[0][var] = 0;
+      motion_task_final_vel_vector[0][var] = calculate_next_velocity(first_vel, second_vel);
+    }
+    return;
+  }
+  if(point_number == all_point) // final phase
+  {
+    for(int var = 0; var <6 ; var++)
+    {
+      motion_task_init_vel_vector[point_number][var] = motion_task_final_vel_vector[point_number-1][var];
+      motion_task_final_vel_vector[point_number][var] = 0;
+    }
+    return;
+  }
+
+  // medium phase
+  for(int var = 0; var <6 ; var++)
+  {
+    first_vel  = calculate_velocity(motion_task_pose_vector[point_number-1][var],motion_task_pose_vector[point_number][var], motion_start_time_vector[point_number][0]); //
+    second_vel = calculate_velocity(motion_task_pose_vector[point_number][var],motion_task_pose_vector[point_number+1][var], motion_start_time_vector[point_number+1][0]); //
+
+    motion_task_init_vel_vector[point_number][var] = motion_task_final_vel_vector[point_number-1][var];
+    motion_task_final_vel_vector[point_number][var] = calculate_next_velocity(first_vel, second_vel);
+  }
+
+}
+double TaskMotion::calculate_next_velocity(double first_vel, double second_vel)
+{
+  if(first_vel*second_vel > 0)
+    return second_vel;
+  else
+    return 0;
 }
 

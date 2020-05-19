@@ -173,14 +173,8 @@ void loop_task_proc(void *arg)
         EAA<>(x, y, z).toRotation3D());
     const std::vector<Q> solutions = solver.solve(Tdesired, state);
 
-
-
-    //const std::vector<Q> solutions = solver.solve(Tdesired, state);
-
-
     ur10e_kinematics->calculate_forward_kinematics(solutions[3].toStdVector());
 
-    // cout << "TF" << ur10e_kinematics->get_tf_base_to_tool()<< "\n\n" ;
 
 
 
@@ -239,8 +233,7 @@ void loop_task_proc(void *arg)
       ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
 
     for(int num= 0; num  < 3; num ++)
-      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(x,y,z)(num,0));
-    ee_cur_value_msg.data.push_back(desired_pose_matrix(0,7));
+      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(x,y,z)(num,0)*RADIAN2DEGREE);
 
     gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
     gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);

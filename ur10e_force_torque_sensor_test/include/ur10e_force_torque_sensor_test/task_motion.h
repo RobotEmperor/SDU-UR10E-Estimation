@@ -39,6 +39,12 @@ public:
   void load_task_motion(std::string path_);
 
   void run_task_motion();
+
+  double calculate_velocity(double first_point,double second_point, double interval_time);
+  double calculate_next_velocity(double first_vel, double second_vel);
+  void calculate_init_final_velocity(int point_number);
+
+
   void clear_task_motion();
 
   void set_point(double x, double y, double z, double roll, double pitch, double yaw, double time);
@@ -56,11 +62,13 @@ private:
   bool check_change;
 
   std::map<int, std::vector<double>> motion_start_time_vector;
-  std::map<int, std::vector<double>> motion_task_vector;
+  std::map<int, std::vector<double>> motion_task_pose_vector;
+  std::map<int, std::vector<double>> motion_task_init_vel_vector;
+  std::map<int, std::vector<double>> motion_task_final_vel_vector;
 
   std::vector<double> current_pose_vector;
   Eigen::MatrixXd desired_pose_matrix;
-  std::shared_ptr<CalRad> ur10e_traj;
+  std::shared_ptr<CalRad> robot_traj;
 
 
 };
