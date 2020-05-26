@@ -48,6 +48,7 @@
 #include "std_msgs/Float64MultiArray.h"
 #include "std_msgs/Float64.h"
 #include "std_msgs/Bool.h"
+#include "std_msgs/String.h"
 
 #include "sdu_sensor/ft_filter.h"
 #include "sdu_sensor/tool_estimation.h"
@@ -64,11 +65,20 @@ using namespace ur_rtde;
 
 void initialize();
 
+bool gazebo_check;
+
 std::shared_ptr<FTfilter> ft_filter;
 std::shared_ptr<ToolEstimation> tool_estimation;
 std::shared_ptr<Kinematics> ur10e_kinematics;
 std::shared_ptr<CalRad> ur10e_traj;
 std::shared_ptr<TaskMotion> ur10e_task;
+
+std::vector<double> joint_positions;
+std::vector<double> force_data;
+std::vector<double> tool_linear_acc_data;
+std::vector<double> tcp_pose_data;
+std::vector<double> tcp_target_pose_data;
+std::vector<double> tcp_speed_data;
 
 
 
@@ -126,10 +136,12 @@ std_msgs::Float64 gazebo_wrist_3_position_msg;
 //void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
 
 void CommandDataMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg);
+void TaskCommandDataMsgCallBack (const std_msgs::String::ConstPtr& msg);
 
 //for ros test
 std::vector<double> joint_vector;
 std::vector<double> desired_pose_vector;
 bool zero_command;
+std::string task_command;
 
 #endif /* UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */

@@ -39,6 +39,9 @@ public:
   void load_task_motion(std::string path_);
 
   void run_task_motion();
+  void generate_trajectory();
+
+  bool task_status();
 
   double calculate_velocity(double first_point,double second_point, double interval_time);
   double calculate_next_velocity(double first_vel, double second_vel);
@@ -60,6 +63,7 @@ private:
   int all_point;
   int current_point;
   bool check_change;
+  bool task_done;
 
   std::map<int, std::vector<double>> motion_start_time_vector;
   std::map<int, std::vector<double>> motion_task_pose_vector;

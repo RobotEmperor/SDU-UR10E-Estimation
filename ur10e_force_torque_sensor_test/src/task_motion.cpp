@@ -25,6 +25,7 @@ void TaskMotion::initialize(double control_time_)
   current_point = -1; // wanna count from 0
   all_point = -1;
   check_change = false;
+  task_done = false;
 
   desired_pose_matrix.resize(6,8);
   desired_pose_matrix.fill(0);
@@ -104,29 +105,43 @@ void TaskMotion::load_task_motion(std::string path_)
     motion_task_final_vel_vector[num] = temp_motion_task_vel_vector;
   }
   temp_motion_task_vel_vector.clear();
+
+  std::cout << "LOAD Cmplete" << std::endl;
 }
 void TaskMotion::run_task_motion()
 {
+  //  robot_traj->cal_end_point_to_rad(desired_pose_matrix);
+  //  for(int num = 0; num <6 ; num ++)
+  //  {
+  //    current_pose_vector[num] = robot_traj->get_traj_results()(num,0);
+  //  }
+  //
 
-  robot_traj->cal_end_point_to_rad(desired_pose_matrix);
-  for(int num = 0; num <6 ; num ++)
-  {
-    current_pose_vector[num] = robot_traj->get_traj_results()(num,0);
-  }
+  if(all_point == -1)
+    return;
 
-  if(robot_traj->is_moving_check !=true )// not during motion --> can recieve first or new point.
+  if(robot_traj->is_moving_check !=true)// not during motion --> can recieve first or new point.
   {
-    if(robot_traj->is_moving_check != check_change) // point change is detected. or stop the robot
+    if(task_done)
+      return;
+
+    if(robot_traj->is_moving_check != check_change) // point change is detected.
     {
       current_point ++;
       std::cout << current_point << std::endl;
     }
+    else
+      current_point = 0; //or stop the robot
 
     if(current_point > all_point)
     {
       check_change = robot_traj->is_moving_check;
+      task_done = true;
       return;
     }
+
+    if(current_point == -1)
+       return;
 
     calculate_init_final_velocity(current_point);
 
@@ -139,14 +154,22 @@ void TaskMotion::run_task_motion()
 
       desired_pose_matrix(num,7) = motion_start_time_vector[current_point][0];
     }
+
     // change the point
   }
   else // during motion
   {
 
   }
-
   check_change = robot_traj->is_moving_check;
+}
+void TaskMotion::generate_trajectory()
+{
+  robot_traj->cal_end_point_to_rad(desired_pose_matrix);
+  for(int num = 0; num <6 ; num ++)
+  {
+    current_pose_vector[num] = robot_traj->get_traj_results()(num,0);
+  }
 }
 std::vector<double> TaskMotion::get_current_pose()
 {
@@ -192,6 +215,7 @@ void TaskMotion::set_point(double x, double y, double z, double roll, double pit
 }
 void TaskMotion::clear_task_motion()
 {
+  task_done = false;
   all_point = -1;
   current_point = -1;
   motion_start_time_vector.clear();
@@ -206,6 +230,9 @@ void TaskMotion::calculate_init_final_velocity(int point_number)
 {
   static double first_vel = 0;
   static double second_vel = 0;
+
+  if(point_number < 0)
+    return;
 
   if(all_point < 1) // in case of one point
   {

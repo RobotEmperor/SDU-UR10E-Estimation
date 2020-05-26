@@ -6,9 +6,7 @@
  */
 #include "ur10e_force_torque_sensor_test/ur10e_force_torque_sensor_test.h"
 #include "ur10e_force_torque_sensor_test/log.h"
-
 #define WC_FILE "/home/yik/sdu_ws/SDU-UR10E-Estimation/wc/UR10e_2018/UR10e.xml"
-
 
 using rw::invkin::ClosedFormIKSolverUR;
 using rw::kinematics::State;
@@ -29,20 +27,8 @@ void loop_task_proc(void *arg)
 
   const State state = wc->getDefaultState();
   const ClosedFormIKSolverUR solver(device, state);
+  double previous_t = 0.0;
 
-  //  const Transform3D<> Tdesired(Vector3D<>(-0.5, 0.184324, 0.5875),
-  //      EAA<>(-Pi, 0, 0).toRotation3D());
-  //  const std::vector<Q> solutions = solver.solve(Tdesired, state);
-  //
-  //  std::cout << "Inverse Kinematics for " << device->getName() << "." << std::endl;
-  //  std::cout << " Base frame: " << device->getBase()->getName() << std::endl;
-  //  std::cout << " End/TCP frame: " << solver.getTCP()->getName() << std::endl;
-  //  std::cout << " Target Transform: " << Tdesired << std::endl;
-  //  std::cout << "Found " << solutions.size() << " solutions." << std::endl; // 3
-  //
-  //  for(std::size_t i = 0; i < solutions.size(); i++) {
-  //    std::cout << " " << solutions[i].toStdVector()<< std::endl;
-  //  }
 
   RT_TASK *curtask;
   RT_TASK_INFO curtaskinfo;
@@ -56,238 +42,267 @@ void loop_task_proc(void *arg)
 
   //Make the task periodic with a specified loop period
   rt_task_set_periodic(NULL, TM_NOW, LOOP_PERIOD);
-
   tstart = rt_timer_read();
 
-  //RTDEReceiveInterface rtde_receive("192.168.1.25");
-  //std::vector<double> joint_positions        = rtde_receive.getActualQ();
-  //std::vector<double> force_data             = rtde_receive.getActualTCPForce();
-  //std::vector<double> tool_linear_acc_data   = rtde_receive.getActualToolAccelerometer();
-  //std::vector<double> tcp_pose_data          = rtde_receive.getActualTCPPose();
-  //std::vector<double> tcp_target_pose_data   = rtde_receive.getTargetTCPPose();
-  //std::vector<double> tcp_speed_data         = rtde_receive.getActualTCPSpeed();
-
-  //tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
-  //tcp_pose_data = rtde_receive.getActualTCPPose();
-  //force_data     = rtde_receive.getActualTCPForce();
-
-  // offset initialize function
-  /*for(int num = 1;num < 1001; num ++)
+  if(!gazebo_check)
   {
-    //ros::spinOnce();
+    std::cout << COLOR_GREEN_BOLD << "Real robot start " << COLOR_RESET << std::endl;
+    RTDEReceiveInterface rtde_receive("192.168.1.25");
+    joint_positions       = rtde_receive.getActualQ();
+    force_data            = rtde_receive.getActualTCPForce();
+    tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+    tcp_pose_data         = rtde_receive.getActualTCPPose();
+    tcp_target_pose_data  = rtde_receive.getTargetTCPPose();
+    tcp_speed_data        = rtde_receive.getActualTCPSpeed();
+
+    tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+    tcp_pose_data = rtde_receive.getActualTCPPose();
+    force_data    = rtde_receive.getActualTCPForce();
+
+    //offset initialize function
+    for(int num = 1;num < 1001; num ++)
+    {
+      force_data     = rtde_receive.getActualTCPForce();
+      tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+
+      for(int var = 0; var < 6; var ++)
+      {
+        raw_force_torque_data(var,0) = force_data[var];
+      }
+      raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
+      raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
+      raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
+
+      ft_filter -> offset_init(raw_force_torque_data, 1000);
+      // tool_estimation -> offset_init(raw_tool_acc_data, 1000);
+      usleep(2000); // 2ms
+    }
+    //cout <<  tool_estimation->offset_data << "\n\n";
+
+    cout <<"\n--------------------------\n";
+
+    cout <<  ft_filter->get_offset_data() << "\n\n";
+
+    cout <<"\n--------------------------\n";
+
+    cout <<  tool_estimation->get_offset_data() << "\n\n";
+
     force_data     = rtde_receive.getActualTCPForce();
     tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
+    tcp_pose_data = rtde_receive.getActualTCPPose();
+    joint_positions = rtde_receive.getActualQ();
+    tcp_target_pose_data = rtde_receive.getTargetTCPPose();
+    tcp_speed_data = rtde_receive.getActualTCPSpeed();
+
     for(int var = 0; var < 6; var ++)
     {
-      raw_force_torque_data(var,0) = force_data[var];
+      raw_force_torque_data(var,0) = -force_data[var];
+      tcp_pose(var,0) = tcp_pose_data[var];
+      tcp_target_pose(var,0) = tcp_target_pose_data[var];
+      tcp_speed(var,0) = tcp_speed_data[var];
     }
     raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
     raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
     raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
 
-    ft_filter -> offset_init(raw_force_torque_data, 1000);
-    // tool_estimation -> offset_init(raw_tool_acc_data, 1000);
-    usleep(2000); // 2ms
-  }*/
-  //cout <<  tool_estimation->offset_data << "\n\n";
+    tool_acc_data = raw_tool_acc_data; //- tool_estimation->get_offset_data();
 
-  //cout <<"\n--------------------------\n";
+    joint_vector[0] = 3.1201586;
+    joint_vector[1] = -1.26581597;
+    joint_vector[2] = -1.98288117;
 
-  //cout <<  ft_filter->get_offset_data() << "\n\n";
+    joint_vector[3] = -1.4641402;
+    joint_vector[4] = 1.567635;
+    joint_vector[5] = -4.72955457;
 
-  //cout <<"\n--------------------------\n";
+    cout <<"trajectory test" << "\n\n" ;
+    cout << "x" << desired_pose_vector[0] << "\n\n" ;
+    cout << "y" << desired_pose_vector[1] << "\n\n" ;
+    cout << "z" << desired_pose_vector[2] << "\n\n" ;
 
-  //cout <<  tool_estimation->get_offset_data() << "\n\n";
+    cout << "r" << desired_pose_vector[3] << "\n\n" ;
+    cout << "p" << desired_pose_vector[4] << "\n\n" ;
+    cout << "y" << desired_pose_vector[5] << "\n\n" ;
 
-  double previous_t = 0.0;
+    tool_acc_data = ur10e_kinematics->tf_base_to_tool(tool_acc_data);
+    tool_estimation->set_acc_input_data(tool_acc_data);
+    tool_estimation->set_pose_input_data(tcp_pose);
+    tool_estimation->set_speed_input_data(tcp_speed);
+    tool_estimation->calculate_angular_acc();
 
-  ur10e_task->load_task_motion("/home/yik/sdu_ws/SDU-UR10E-Estimation/config/test2.yaml");
+    ft_filter->filter_processing(raw_force_torque_data);
 
+    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"x");
+    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"y");
+    tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"z");
 
-  //Start the task loop
-  while(1){
-    if((rt_timer_read() - tstart)/1000000.0  - previous_t > (control_time*1000 + 0.15)) //
-    {
-      printf("delayed Loop time: %.5f ms\n",((rt_timer_read() - tstart)/1000000.0  - previous_t) - control_time*1000);
-    }
-    previous_t = (rt_timer_read() - tstart)/1000000.0;
+    contacted_force_data = tool_estimation->get_contacted_force(tcp_pose,tcp_target_pose,raw_force_torque_data + ft_filter->get_offset_data(), tool_acc_data.block(0,0,3,1));
 
-    //force_data     = rtde_receive.getActualTCPForce();
-    //tool_linear_acc_data  = rtde_receive.getActualToolAccelerometer();
-    //tcp_pose_data = rtde_receive.getActualTCPPose();
-    //joint_positions = rtde_receive.getActualQ();
-    //tcp_target_pose_data = rtde_receive.getTargetTCPPose();
-    //    tcp_speed_data = rtde_receive.getActualTCPSpeed();
-
-
-    for(int var = 0; var < 6; var ++)
-    {
-      //raw_force_torque_data(var,0) = -force_data[var];
-      //tcp_pose(var,0) = tcp_pose_data[var];
-      //tcp_target_pose(var,0) = tcp_target_pose_data[var];
-      //tcp_speed(var,0) = tcp_speed_data[var];
-    }
-    //raw_tool_acc_data(0, 0) = tool_linear_acc_data[0];
-    //raw_tool_acc_data(1, 0) = tool_linear_acc_data[1];
-    //raw_tool_acc_data(2, 0) = tool_linear_acc_data[2];
-
-    //tool_acc_data = raw_tool_acc_data; //- tool_estimation->get_offset_data();
-    // test
-    //    joint_vector[0] = 3.1201586;
-    //    joint_vector[1] = -1.26581597;
-    //    joint_vector[2] = -1.98288117;
-    //
-    //    joint_vector[3] = -1.4641402;
-    //    joint_vector[4] = 1.567635;
-    //    joint_vector[5] = -4.72955457;
-
-
-    //        cout <<"trajectory test" << "\n\n" ;
-    //        cout << "x" << desired_pose_vector[0] << "\n\n" ;
-    //        cout << "y" << desired_pose_vector[1] << "\n\n" ;
-    //        cout << "z" << desired_pose_vector[2] << "\n\n" ;
-    //
-    //        cout << "r" << desired_pose_vector[3] << "\n\n" ;
-    //        cout << "p" << desired_pose_vector[4] << "\n\n" ;
-    //        cout << "y" << desired_pose_vector[5] << "\n\n" ;
-
-
-    //ur10e_kinematics->calculate_forward_kinematics(ur10e_kinematics->get_ik_joint_results());
-    //ur10e_kinematics->calculate_inverse_kinematics(desired_pose_vector);
-
-    //ur10e_task->set_point(desired_pose_matrix(0,1),desired_pose_matrix(1,1),desired_pose_matrix(2,1),
-    //    desired_pose_matrix(3,1),desired_pose_matrix(4,1),desired_pose_matrix(5,1), motion_time);
-
-
-    ur10e_task->run_task_motion();
-    desired_pose_vector = ur10e_task->get_current_pose();
-
-
-    double x,y,z;
-    x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
-    y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
-    z = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(3,0);
-
-
-    const Transform3D<> Tdesired(Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]),
-        EAA<>(x, y, z).toRotation3D());
-    const std::vector<Q> solutions = solver.solve(Tdesired, state);
-
-    ur10e_kinematics->calculate_forward_kinematics(solutions[3].toStdVector());
-
-
-
-
-    //tool_acc_data = ur10e_kinematics->tf_base_to_tool(tool_acc_data);
-    //tool_estimation->set_acc_input_data(tool_acc_data);
-    //tool_estimation->set_pose_input_data(tcp_pose);
-    //tool_estimation->set_speed_input_data(tcp_speed);
-    //tool_estimation->calculate_angular_acc();
-
-    //ft_filter->filter_processing(raw_force_torque_data);
-
-    //tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"x");
-    //tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"y");
-    //tool_estimation->get_one_axis_inertia_tensor(ft_filter->get_filtered_data(),"z");
-    //
-    //contacted_force_data = tool_estimation->get_contacted_force(tcp_pose,tcp_target_pose,raw_force_torque_data + ft_filter->get_offset_data(), tool_acc_data.block(0,0,3,1));
-    //
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(0,0));
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(2,0));
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(3,0));
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(4,0));
     filtered_force_torque_data_msg.data.push_back(raw_force_torque_data(5,0));
-    //
-    //
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
-    //
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(3,0));
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(4,0));
-    //filtered_force_torque_data_msg.data.push_back(contacted_force_data(5,0));
-    //
-    //filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(0,0));
-    //filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(1,0));
-    //filtered_force_torque_data_msg.data.push_back(tool_estimation->get_orientation_angle()(2,0));
-    //
+
     filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
     filtered_force_torque_data_msg.data.clear();
 
+    while(1){
+      if((rt_timer_read() - tstart)/1000000.0  - previous_t > (control_time*1000 + 0.15)) //
+      {
+        printf("delayed Loop time: %.5f ms\n",((rt_timer_read() - tstart)/1000000.0  - previous_t) - control_time*1000);
+      }
+      previous_t = (rt_timer_read() - tstart)/1000000.0;
 
-    gazebo_shoulder_pan_position_msg.data = solutions[3].toStdVector()[0];
-    gazebo_shoulder_lift_position_msg.data = solutions[3].toStdVector()[1];
-    gazebo_elbow_position_msg.data = solutions[3].toStdVector()[2];
-    gazebo_wrist_1_position_msg.data = solutions[3].toStdVector()[3];
-    gazebo_wrist_2_position_msg.data = solutions[3].toStdVector()[4];
-    gazebo_wrist_3_position_msg.data = solutions[3].toStdVector()[5];
 
-    for(int num= 0; num  < 6; num ++)
-      joint_cur_value_msg.data.push_back(solutions[3].toStdVector()[num]);
+      // controller algorithm
+      ur10e_task->run_task_motion();
 
-    for(int num= 0; num  < 3; num ++)
-      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
+      // have to add force controller
 
-    for(int num= 0; num  < 3; num ++)
-      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(x,y,z)(num,0)*RADIAN2DEGREE);
+      //
+      desired_pose_vector = ur10e_task->get_current_pose();
 
-    gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
-    gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
-    gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
-    gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
-    gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
-    gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+      double x,y,z;
+      x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
+      y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
+      z = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(3,0);
 
-    joint_cur_value_pub.publish(joint_cur_value_msg);
-    ee_cur_value_pub.publish(ee_cur_value_msg);
+      //
+      const Transform3D<> Tdesired(Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]),
+          EAA<>(x, y, z).toRotation3D());
+      const std::vector<Q> solutions = solver.solve(Tdesired, state);
 
-    joint_cur_value_msg.data.clear();
-    ee_cur_value_msg.data.clear();
+      ur10e_kinematics->calculate_forward_kinematics(solutions[3].toStdVector());
 
-    ros::spinOnce();
-    /*
-    for(int num = 0; num<6; num++)
-    {
-      getActualTCPForce += " "+to_string(raw_force_torque_data(num,0));
-      getFilteredForce += " "+to_string(ft_filter->get_filtered_data()(num,0));
-      getContactedForceTorque += " "+to_string(contacted_force_data(num,0));
-      //getActualQ +=" "+to_string(joint_positions[num]);
+      for(int num= 0; num  < 6; num ++)
+        joint_cur_value_msg.data.push_back(solutions[3].toStdVector()[num]);
+
+      for(int num= 0; num  < 3; num ++)
+        ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
+
+      for(int num= 0; num  < 3; num ++)
+        ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(x,y,z)(num,0)*RADIAN2DEGREE);
+
+
+      for(int num = 0; num<6; num++)
+      {
+        getActualTCPForce += " "+to_string(raw_force_torque_data(num,0));
+        getFilteredForce += " "+to_string(ft_filter->get_filtered_data()(num,0));
+        getContactedForceTorque += " "+to_string(contacted_force_data(num,0));
+        //getActualQ +=" "+to_string(joint_positions[num]);
+      }
+      for(int num = 0; num<3; num++)
+      {
+        getActualToolAccelerometer += " "+to_string(tool_acc_data(num,0));
+        getTargetTCPPose += " "+to_string(tcp_target_pose(num,0));
+        getActualTCPPose += " "+to_string(tcp_pose(num,0));
+        getActualToolSpeed +=" "+to_string(tool_estimation->get_orientation_vel()(num,0));
+        getActualToolAcc +=" "+to_string(tool_estimation->get_orientation_acc()(num,0));
+
+      }
+      for(int num = 0; num<3; num++)
+      {
+        getActualTCPPose += " "+to_string(tool_estimation->get_orientation_angle()(num,0));
+        getTargetTCPPose += " "+to_string(tcp_target_pose(num+3,0));
+      }
+
+      data_line = to_string(time_count)+getTargetTCPPose+getActualTCPPose+getActualTCPForce+getFilteredForce+getContactedForceTorque+
+          getActualToolAccelerometer+getActualToolSpeed+getActualToolAcc+getActualQ;
+
+      out<<data_line<<endl;
+
+      getTargetTCPPose = "";
+      getActualTCPPose = "";
+      getActualTCPForce = "";
+      getFilteredForce = "";
+      getContactedForceTorque = "";
+      getActualToolAccelerometer = "";
+      getActualToolSpeed = "";
+      getActualToolAcc = "";
+      getActualQ = "";
+
+
+      joint_cur_value_pub.publish(joint_cur_value_msg);
+      ee_cur_value_pub.publish(ee_cur_value_msg);
+
+      joint_cur_value_msg.data.clear();
+      ee_cur_value_msg.data.clear();
+
+      ros::spinOnce();
+      rt_task_wait_period(NULL);
     }
-    for(int num = 0; num<3; num++)
-    {
-      getActualToolAccelerometer += " "+to_string(tool_acc_data(num,0));
-      getTargetTCPPose += " "+to_string(tcp_target_pose(num,0));
-      getActualTCPPose += " "+to_string(tcp_pose(num,0));
-      getActualToolSpeed +=" "+to_string(tool_estimation->get_orientation_vel()(num,0));
-      getActualToolAcc +=" "+to_string(tool_estimation->get_orientation_acc()(num,0));
+  }
+  else
+  {
+    std::cout << COLOR_GREEN_BOLD << "Gazebo robot start " << COLOR_RESET << std::endl;
+    //Start the task loop
+    while(1){
+      if((rt_timer_read() - tstart)/1000000.0  - previous_t > (control_time*1000 + 0.15)) //
+      {
+        printf("delayed Loop time: %.5f ms\n",((rt_timer_read() - tstart)/1000000.0  - previous_t) - control_time*1000);
+      }
+      previous_t = (rt_timer_read() - tstart)/1000000.0;
 
+      // controller algorithm
+
+
+      if(task_command.compare(""))
+      {
+        ur10e_task->run_task_motion();
+      }
+
+      // have to add force controller
+
+      //
+      ur10e_task->generate_trajectory();
+      desired_pose_vector = ur10e_task->get_current_pose();
+
+      double x,y,z;
+      x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
+      y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
+      z = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(3,0);
+
+      //
+      const Transform3D<> Tdesired(Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]),
+          EAA<>(x, y, z).toRotation3D());
+      const std::vector<Q> solutions = solver.solve(Tdesired, state);
+
+      ur10e_kinematics->calculate_forward_kinematics(solutions[3].toStdVector());
+
+      for(int num= 0; num  < 6; num ++)
+        joint_cur_value_msg.data.push_back(solutions[3].toStdVector()[num]);
+
+      for(int num= 0; num  < 3; num ++)
+        ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
+
+      for(int num= 0; num  < 3; num ++)
+        ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(x,y,z)(num,0)*RADIAN2DEGREE);
+
+      gazebo_shoulder_pan_position_msg.data = solutions[3].toStdVector()[0];
+      gazebo_shoulder_lift_position_msg.data = solutions[3].toStdVector()[1];
+      gazebo_elbow_position_msg.data = solutions[3].toStdVector()[2];
+      gazebo_wrist_1_position_msg.data = solutions[3].toStdVector()[3];
+      gazebo_wrist_2_position_msg.data = solutions[3].toStdVector()[4];
+      gazebo_wrist_3_position_msg.data = solutions[3].toStdVector()[5];
+
+      gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
+      gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
+      gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
+      gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
+      gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
+      gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+
+      joint_cur_value_pub.publish(joint_cur_value_msg);
+      ee_cur_value_pub.publish(ee_cur_value_msg);
+
+      joint_cur_value_msg.data.clear();
+      ee_cur_value_msg.data.clear();
+
+      ros::spinOnce();
+      rt_task_wait_period(NULL);
     }
-    for(int num = 0; num<3; num++)
-    {
-      getActualTCPPose += " "+to_string(tool_estimation->get_orientation_angle()(num,0));
-      getTargetTCPPose += " "+to_string(tcp_target_pose(num+3,0));
-    }
-
-    data_line = to_string(time_count)+getTargetTCPPose+getActualTCPPose+getActualTCPForce+getFilteredForce+getContactedForceTorque+
-        getActualToolAccelerometer+getActualToolSpeed+getActualToolAcc+getActualQ;
-
-    out<<data_line<<endl;
-
-    getTargetTCPPose = "";
-    getActualTCPPose = "";
-    getActualTCPForce = "";
-    getFilteredForce = "";
-    getContactedForceTorque = "";
-    getActualToolAccelerometer = "";
-    getActualToolSpeed = "";
-    getActualToolAcc = "";
-    getActualQ = "";
-     */
-    rt_task_wait_period(NULL);
   }
 }
 
@@ -349,6 +364,23 @@ void CommandDataMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg)
     motion_time =  msg->data[6];
   }
 
+  task_command = "";
+  ur10e_task->set_point(msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4], msg->data[5], msg->data[6]);
+}
+void TaskCommandDataMsgCallBack (const std_msgs::String::ConstPtr& msg)
+{
+  static std::string path_ = "";
+  task_command = msg->data;
+
+  if(!task_command.compare("init"))
+  {
+    ur10e_task->clear_task_motion();
+    return;
+  }
+
+  path_ = "/home/yik/sdu_ws/SDU-UR10E-Estimation/config/" + task_command + ".yaml";
+
+  ur10e_task->load_task_motion(path_);
 }
 void initialize()
 {
@@ -409,10 +441,7 @@ void initialize()
   {
     desired_pose_vector[num] = 0;
   }
-
-
-
-
+  task_command = "";
   //data variables define
   getTargetTCPPose = " target_tcp_pose_x target_tcp_pose_y target_tcp_pose_z target_tcp_pose_r target_tcp_pose_p target_tcp_pose_y";
   getActualTCPPose = " actual_tcp_pose_x actual_tcp_pose_y actual_tcp_pose_z actual_tcp_pose_r actual_tcp_pose_p actual_tcp_pose_y";
@@ -442,6 +471,26 @@ void initialize()
 
 int main (int argc, char **argv)
 {
+  gazebo_check = true;
+  std::string silmulation_on_off;
+  std::cout << COLOR_YELLOW_BOLD << "Simulation On [ yes / no ]" << COLOR_RESET << std::endl;
+  cin >> silmulation_on_off;
+
+  if(!silmulation_on_off.compare("yes") || !silmulation_on_off.compare("y"))
+    std::cout << COLOR_GREEN_BOLD << "Setting up Simulation " << COLOR_RESET << std::endl;
+  else
+  {
+    std::cout << COLOR_GREEN_BOLD << "REAL Robot, Be careful to run:" << COLOR_RESET << std::endl;
+    std::cout << COLOR_GREEN_BOLD << "Are you sure ? [yes / no]" << COLOR_RESET << std::endl;
+    cin >> silmulation_on_off;
+    if(!silmulation_on_off.compare("no") || !silmulation_on_off.compare("n"))
+    {
+      std::cout << COLOR_RED_BOLD << "Terminate program" << COLOR_RESET << std::endl;
+      return 0;
+    }
+    gazebo_check = false;
+  }
+
 
   std::cout << COLOR_GREEN_BOLD << "Program Start:" << COLOR_RESET << std::endl;
   ros::init(argc, argv, "talker");
@@ -450,24 +499,28 @@ int main (int argc, char **argv)
   //ros publisher
   joint_cur_value_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/ur10e/joint_cur_value", 10);
   ee_cur_value_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/ur10e/ee_cur_value", 10);
-
   filtered_force_torque_data_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/chatter", 10);
 
-  gazebo_shoulder_pan_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_pan_position/command", 10);
-  gazebo_shoulder_lift_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_lift_position/command", 10);
-  gazebo_elbow_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/elbow_position/command", 10);
-  gazebo_wrist_1_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_1_position/command", 10);
-  gazebo_wrist_2_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_2_position/command", 10);
-  gazebo_wrist_3_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_3_position/command", 10);
+  if(gazebo_check)
+  {
+    gazebo_shoulder_pan_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_pan_position/command", 10);
+    gazebo_shoulder_lift_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_lift_position/command", 10);
+    gazebo_elbow_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/elbow_position/command", 10);
+    gazebo_wrist_1_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_1_position/command", 10);
+    gazebo_wrist_2_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_2_position/command", 10);
+    gazebo_wrist_3_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_3_position/command", 10);
+  }
 
   // ros subsrcibe
   ros::Subscriber raw_force_torque_data_sub;
   ros::Subscriber zero_command_sub;
   ros::Subscriber command_sub;
+  ros::Subscriber task_command_sub;
 
   //raw_force_torque_data_sub = n.subscribe("/sdu/ur10e/raw_force_torque_data", 10, RawForceTorqueDataMsgCallBack);
   raw_force_torque_data_sub = n.subscribe("/chatter", 10, RawForceTorqueDataMsgCallBack);
   command_sub = n.subscribe("/sdu/ur10e/ee_command", 10, CommandDataMsgCallBack);
+  task_command_sub = n.subscribe("/sdu/ur10e/task_command", 10, TaskCommandDataMsgCallBack);
   //zero_command_sub          = n.subscribe("/sdu/zero", 10, ZeroCommandMsgCallBack);
 
 
@@ -484,35 +537,28 @@ int main (int argc, char **argv)
   usleep(3000000);
 
   //gazebo test
-  gazebo_shoulder_pan_position_msg.data = 3.1213190230795913;
-  gazebo_shoulder_lift_position_msg.data = -1.2650450021126538;
-  gazebo_elbow_position_msg.data = -1.9836958306426968;
-  gazebo_wrist_1_position_msg.data = -1.4640438428275298;
-  gazebo_wrist_2_position_msg.data = 1.5707963268419363;
-  gazebo_wrist_3_position_msg.data = 1.5505226962847685;
+  if(gazebo_check)
+  {
+    gazebo_shoulder_pan_position_msg.data = 3.1213190230795913;
+    gazebo_shoulder_lift_position_msg.data = -1.2650450021126538;
+    gazebo_elbow_position_msg.data = -1.9836958306426968;
+    gazebo_wrist_1_position_msg.data = -1.4640438428275298;
+    gazebo_wrist_2_position_msg.data = 1.5707963268419363;
+    gazebo_wrist_3_position_msg.data = 1.5505226962847685;
 
-  gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
-  gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
-  gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
-  gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
-  gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
-  gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+    gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
+    gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
+    gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
+    gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
+    gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
+    gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+  }
 
   ros::spinOnce();
 
   usleep(3000000);
 
   std::cout << COLOR_GREEN << "ROS and ft sensor was initialized!" << COLOR_RESET << std::endl;
-
-
-  // kinematics
-
-  //  if (argc != 2) {
-  //    std::cout << "Usage: " << argv[0] << " <path/to/RobWorkData>" << std::endl;
-  //    exit(1);
-  //  }
-  //  const std::string path = argv[1];
-
 
   //real time task
   char str[35];
@@ -532,17 +578,5 @@ int main (int argc, char **argv)
   out.close();
   cout << "complete and save" << "\n\n";
   printf("exiting safely\n");
-
-  //  while(ros::ok())
-  //  {
-  //    ros::spinOnce();
-  //  }
-  //
-  //  out.close();
-  //  cout << "complete and save" << "\n\n";
-  //  printf("exiting safely\n");
-
-
-
   return 0;
 }
