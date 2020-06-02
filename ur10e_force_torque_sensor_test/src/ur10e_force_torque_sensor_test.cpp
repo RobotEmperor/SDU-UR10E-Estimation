@@ -22,6 +22,10 @@ void loop_task_proc(void *arg)
   const State state = wc->getDefaultState();
   const ClosedFormIKSolverUR solver(device, state);
   double previous_t = 0.0;
+  double axis_angle_x,axis_angle_y,axis_angle_z;
+  axis_angle_x = 0;
+  axis_angle_y = 0;
+  axis_angle_z = 0;
 
 
   RT_TASK *curtask;
@@ -95,10 +99,41 @@ void loop_task_proc(void *arg)
         }
       }
 
+      // force torque sensor filtering
       tool_estimation->set_orientation_data(tf_current_matrix);
       tool_acc_data = tf_current_matrix*tool_acc_data;
-
       contacted_force_data = tool_estimation->get_estimated_force(raw_force_torque_data, tool_acc_data.block(0,0,3,1));
+
+      //controller algorithm
+
+      //ur10e_task->run_task_motion();
+      //
+      ////motion reference
+      //desired_pose_vector = ur10e_task->get_current_pose();
+
+      ////controller for force compensation
+
+      force_x_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+      //force_y_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+      //force_z_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+
+
+      //force_x_compensator->PID_calculate(1,contacted_force_data(0,0));
+      //force_y_compensator->PID_calculate(1,contacted_force_data(1,0));
+      //force_z_compensator->PID_calculate(1,contacted_force_data(2,0));
+
+      desired_pose_vector[0] = desired_pose_vector[0] + force_x_compensator->PID_calculate(1,contacted_force_data(0,0));
+      //
+      //
+      //axis_angle_x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
+      //axis_angle_y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
+      //axis_angle_z = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(3,0);
+      //
+      ////
+      //const Transform3D<> Tdesired(Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]),
+      //    EAA<>(axis_angle_x, axis_angle_x, axis_angle_x).toRotation3D());
+      //const std::vector<Q> solutions = solver.solve(Tdesired, state);
+
 
       raw_force_torque_data_msg.data.push_back(raw_force_torque_data(0,0));
       raw_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
@@ -112,23 +147,6 @@ void loop_task_proc(void *arg)
       filtered_force_torque_data_msg.data.clear();
       raw_force_torque_data_msg.data.clear();
 
-      // controller algorithm
-      //ur10e_task->run_task_motion();
-
-      // have to add force controller
-
-      //
-      //desired_pose_vector = ur10e_task->get_current_pose();
-
-      //double x,y,z;
-      //x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
-      //y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
-      //z = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(3,0);
-      //
-      ////
-      //const Transform3D<> Tdesired(Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]),
-      //    EAA<>(x, y, z).toRotation3D());
-      //const std::vector<Q> solutions = solver.solve(Tdesired, state);
 
       //ur10e_kinematics->calculate_forward_kinematics(solutions[3].toStdVector());
 
@@ -208,20 +226,25 @@ void loop_task_proc(void *arg)
         ur10e_task->run_task_motion();
       }
 
-      // have to add force controller
+      //controller algorithm
+      ur10e_task->run_task_motion();
 
-      //
-      ur10e_task->generate_trajectory();
+      //motion reference
       desired_pose_vector = ur10e_task->get_current_pose();
+
+      //controller for force compensation
+
+
+
+
+      axis_angle_x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
+      axis_angle_y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
+      axis_angle_z = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(3,0);
+
       //
-      double x,y,z;
-      x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
-      y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
-      z = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(3,0);
-
-
-      tf_desired = Transform3D<> (Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]), EAA<>(x, y, z).toRotation3D());
-      solutions = solver.solve(tf_desired, state);
+      const Transform3D<> Tdesired(Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]),
+          EAA<>(axis_angle_x, axis_angle_x, axis_angle_x).toRotation3D());
+      const std::vector<Q> solutions = solver.solve(Tdesired, state);
 
       ur10e_kinematics->calculate_forward_kinematics(solutions[3].toStdVector());
 
@@ -232,7 +255,7 @@ void loop_task_proc(void *arg)
         ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
 
       for(int num= 0; num  < 3; num ++)
-        ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(x,y,z)(num,0)*RADIAN2DEGREE);
+        ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(axis_angle_x,axis_angle_y,axis_angle_z)(num,0)*RADIAN2DEGREE);
 
       gazebo_shoulder_pan_position_msg.data = solutions[3].toStdVector()[0];
       gazebo_shoulder_lift_position_msg.data = solutions[3].toStdVector()[1];
@@ -262,43 +285,6 @@ void loop_task_proc(void *arg)
 
 void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg)
 {
-  if(msg->data.size() < 6)
-  {
-    raw_force_torque_data(0,0) = 0;
-    raw_force_torque_data(1,0) = 0;
-    raw_force_torque_data(2,0) = 0;
-    raw_force_torque_data(3,0) = 0;
-    raw_force_torque_data(4,0) = 0;
-    raw_force_torque_data(5,0) = 0;
-    return; // some data are missed
-  }
-  else
-  {
-    raw_force_torque_data(0,0) = msg->data[0];
-    raw_force_torque_data(1,0) = msg->data[1];
-    raw_force_torque_data(2,0) = msg->data[2];
-    raw_force_torque_data(3,0) = msg->data[3];
-    raw_force_torque_data(4,0) = msg->data[4];
-    raw_force_torque_data(5,0) = msg->data[5];
-
-    joint_vector[0] = msg->data[18];
-    joint_vector[1] = msg->data[19];
-    joint_vector[2] = msg->data[20];
-    joint_vector[3] = msg->data[21];
-    joint_vector[4] = msg->data[22];
-    joint_vector[5] = msg->data[23];
-
-    raw_tool_acc_data(0,0) = msg->data[15];
-    raw_tool_acc_data(1,0) = msg->data[16];
-    raw_tool_acc_data(2,0) = msg->data[17];
-
-    tcp_pose(0,0) = msg->data[24];
-    tcp_pose(1,0) = msg->data[25];
-    tcp_pose(2,0) = msg->data[26];
-    tcp_pose(3,0) = msg->data[27];
-    tcp_pose(4,0) = msg->data[28];
-    tcp_pose(5,0) = msg->data[29];
-  }
 }
 //void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg)
 //{
@@ -336,20 +322,33 @@ void TaskCommandDataMsgCallBack (const std_msgs::String::ConstPtr& msg)
 
   ur10e_task->load_task_motion(path_);
 }
+void PidGainCommandMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg)
+{
+  f_kp = msg->data[0];
+  f_ki = msg->data[1];
+  f_kd = msg->data[2];
+}
 void initialize()
 {
+  std::string ft_init_data_path;
+  ft_init_data_path = "../config/ft_init_data.yaml";
+
+  control_time = 0.002;
+
   //ft_filter = std::make_shared<FTfilter>();
   tool_estimation = std::make_shared<ToolEstimation>();
 
   ur10e_kinematics = std::make_shared<Kinematics>();
   ur10e_traj = std::make_shared<CalRad>();
   ur10e_task = std::make_shared<TaskMotion>();
+  force_x_compensator = std::make_shared<PID_function>(control_time, 0.01, -0.01, 0, 0, 0);
+  force_y_compensator = std::make_shared<PID_function>(control_time, 0.01, -0.01, 0, 0, 0);
+  force_z_compensator = std::make_shared<PID_function>(control_time, 0.01, -0.01, 0, 0, 0);
 
   //kinematics
   ur10e_kinematics->set_dh_parameter(0.1807, -0.6127, -0.57155, 0.17415, 0.11985, 0.11655);
 
   // fifth order traj
-  control_time = 0.002;
   ur10e_traj->set_control_time(control_time);
 
   ur10e_task->initialize(control_time);
@@ -366,19 +365,15 @@ void initialize()
   tcp_pose.resize(6,1);
   tcp_pose.fill(0);
 
-  tcp_target_pose.resize(6,1);
-  tcp_target_pose.fill(0);
-
-
   desired_pose_matrix.resize(6,8);
   desired_pose_matrix.fill(0);
 
+  //ft_filter->initialize(ft_init_data_path);
+  //tool_estimation->initialize();
+  //tool_estimation->set_parameters(control_time, 1);
+
+  tool_estimation->initialize();
   tool_estimation ->set_parameters(control_time, 2.52);
-  gravity.resize(4,1);
-  gravity << 0.114921681582928,
-      -0.076614454388618,
-      9.2703,
-      0;
 
   desired_pose_matrix(0,1) = -0.5;
   desired_pose_matrix(1,1) = 0.184324;
@@ -399,7 +394,6 @@ void initialize()
   //  desired_pose_vector[3] = -180*DEGREE2RADIAN;
   //  desired_pose_vector[4] = 0;
   //  desired_pose_vector[5] = 0;
-
   //robot B
   desired_pose_vector[0] = -0.41361;
   desired_pose_vector[1] = 0.03022;
@@ -408,10 +402,14 @@ void initialize()
   desired_pose_vector[4] = 2.220;
   desired_pose_vector[5] = 0.001;
 
-
   //
   tf_current_matrix.resize(4,4);
   tf_current_matrix.fill(0);
+
+  // force controller
+  f_kp = 0;
+  f_ki = 0;
+  f_kd = 0;
 
   //gazebo
   gazebo_shoulder_pan_position_msg.data = 3.1213190230795913;
@@ -485,9 +483,11 @@ int main (int argc, char **argv)
   ros::Subscriber zero_command_sub;
   ros::Subscriber command_sub;
   ros::Subscriber task_command_sub;
+  ros::Subscriber pid_gain_command_sub;
 
   command_sub = n.subscribe("/sdu/ur10e/ee_command", 10, CommandDataMsgCallBack);
   task_command_sub = n.subscribe("/sdu/ur10e/task_command", 10, TaskCommandDataMsgCallBack);
+  pid_gain_command_sub = n.subscribe("/sdu/ur10e/pid_gain_command", 10, PidGainCommandMsgCallBack);
 
   initialize();
   usleep(3000000);
@@ -515,26 +515,17 @@ int main (int argc, char **argv)
     rtde_receive = std::make_shared<RTDEReceiveInterface>(robot_ip);
     rtde_control = std::make_shared<RTDEControlInterface>(robot_ip);
 
-
     //rtde_control->zeroFtSensor();
 
     std::cout << COLOR_YELLOW_BOLD << "Robot connected to your program" << COLOR_RESET << std::endl;
     std::cout << COLOR_RED_BOLD << "Robot will move 2 seconds later" << COLOR_RESET << std::endl;
     usleep(2000000);
-    rtde_control->moveL(desired_pose_vector,0.1,0.1);
+    rtde_control->moveL(desired_pose_vector,0.1,0.1); // move to initial pose
     std::cout << COLOR_RED_BOLD << "Send" << COLOR_RESET << std::endl;
     usleep(2000000);
   }
 
   //system conffiguration
-  std::string ft_init_data_path;
-  ft_init_data_path = "../config/ft_init_data.yaml";
-
-
-  //ft_filter->initialize(ft_init_data_path);
-  //tool_estimation->initialize();
-  //tool_estimation->set_parameters(control_time, 1);
-  zero_command = false;
   //
 
   ros::spinOnce();

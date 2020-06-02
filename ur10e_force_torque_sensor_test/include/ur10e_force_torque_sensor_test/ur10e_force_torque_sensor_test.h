@@ -53,6 +53,7 @@
 #include "sdu_sensor/ft_filter.h"
 #include "sdu_sensor/tool_estimation.h"
 #include "sdu_math/end_point_to_rad_cal.h"
+#include "sdu_math/control_function.h"
 #include "ur10e_force_torque_sensor_test/task_motion.h"
 
 #define CLOCK_RES 1e-9 //Clock resolution is 1 us by default 1e-9
@@ -77,7 +78,9 @@ std::shared_ptr<ToolEstimation> tool_estimation;
 std::shared_ptr<Kinematics> ur10e_kinematics;
 std::shared_ptr<CalRad> ur10e_traj;
 std::shared_ptr<TaskMotion> ur10e_task;
-
+std::shared_ptr<PID_function> force_x_compensator;
+std::shared_ptr<PID_function> force_y_compensator;
+std::shared_ptr<PID_function> force_z_compensator;
 
 std::shared_ptr<RTDEReceiveInterface> rtde_receive;
 std::shared_ptr<RTDEControlInterface> rtde_control;
@@ -86,18 +89,12 @@ std::vector<double> joint_positions;
 std::vector<double> force_data;
 std::vector<double> tool_linear_acc_data;
 std::vector<double> tcp_pose_data;
-std::vector<double> tcp_target_pose_data;
-std::vector<double> tcp_speed_data;
 
 Eigen::MatrixXd raw_force_torque_data;
-Eigen::MatrixXd raw_tool_acc_data;
 Eigen::MatrixXd tool_acc_data;
 Eigen::MatrixXd contacted_force_data;
 Eigen::MatrixXd tcp_pose;
-Eigen::MatrixXd tcp_target_pose;
-Eigen::MatrixXd tcp_speed;
 Eigen::MatrixXd desired_pose_matrix;
-Eigen::MatrixXd gravity;
 
 double control_time;
 double sampling_time;
@@ -147,6 +144,7 @@ std_msgs::Float64 gazebo_wrist_3_position_msg;
 
 void CommandDataMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg);
 void TaskCommandDataMsgCallBack (const std_msgs::String::ConstPtr& msg);
+void PidGainCommandMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg);
 
 //for ros test
 std::vector<double> joint_vector;
@@ -159,6 +157,12 @@ rw::math::Transform3D<> tf_desired;
 rw::math::Transform3D<> tf_current;
 
 Eigen::MatrixXd tf_current_matrix;
+
+//force controller pid gain
+double f_kp;
+double f_ki;
+double f_kd;
+
 
 
 //q solution
