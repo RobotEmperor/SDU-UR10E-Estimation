@@ -26,8 +26,6 @@
 //log
 #include "ur10e_force_torque_sensor_test/log.h"
 
-using namespace std;
-
 class TaskMotion
 {
 
@@ -76,17 +74,4 @@ private:
 
 
 };
-
-
-
-
-
-////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
 #endif /* TASK_MOTION_H_ */

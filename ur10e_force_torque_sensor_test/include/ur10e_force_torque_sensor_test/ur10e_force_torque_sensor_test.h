@@ -62,16 +62,25 @@ RT_TASK loop_task;
 
 using namespace std;
 using namespace ur_rtde;
+using namespace rw::math;
+using namespace rw::models;
+using rw::invkin::ClosedFormIKSolverUR;
+using rw::kinematics::State;
+using rw::loaders::WorkCellLoader;
 
 void initialize();
 
 bool gazebo_check;
 
-std::shared_ptr<FTfilter> ft_filter;
+//std::shared_ptr<FTfilter> ft_filter;
 std::shared_ptr<ToolEstimation> tool_estimation;
 std::shared_ptr<Kinematics> ur10e_kinematics;
 std::shared_ptr<CalRad> ur10e_traj;
 std::shared_ptr<TaskMotion> ur10e_task;
+
+
+std::shared_ptr<RTDEReceiveInterface> rtde_receive;
+std::shared_ptr<RTDEControlInterface> rtde_control;
 
 std::vector<double> joint_positions;
 std::vector<double> force_data;
@@ -79,8 +88,6 @@ std::vector<double> tool_linear_acc_data;
 std::vector<double> tcp_pose_data;
 std::vector<double> tcp_target_pose_data;
 std::vector<double> tcp_speed_data;
-
-
 
 Eigen::MatrixXd raw_force_torque_data;
 Eigen::MatrixXd raw_tool_acc_data;
@@ -90,6 +97,7 @@ Eigen::MatrixXd tcp_pose;
 Eigen::MatrixXd tcp_target_pose;
 Eigen::MatrixXd tcp_speed;
 Eigen::MatrixXd desired_pose_matrix;
+Eigen::MatrixXd gravity;
 
 double control_time;
 double sampling_time;
@@ -110,6 +118,7 @@ string getActualToolAcc;
 
 //ros
 ros::Publisher filtered_force_torque_data_pub;
+ros::Publisher raw_force_torque_data_pub;
 
 ros::Publisher joint_cur_value_pub;
 ros::Publisher ee_cur_value_pub;
@@ -121,6 +130,7 @@ ros::Publisher gazebo_wrist_1_position_pub;
 ros::Publisher gazebo_wrist_2_position_pub;
 ros::Publisher gazebo_wrist_3_position_pub;
 
+std_msgs::Float64MultiArray raw_force_torque_data_msg;
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
 std_msgs::Float64MultiArray joint_cur_value_msg;
 std_msgs::Float64MultiArray ee_cur_value_msg;
@@ -143,5 +153,15 @@ std::vector<double> joint_vector;
 std::vector<double> desired_pose_vector;
 bool zero_command;
 std::string task_command;
+
+//tf
+rw::math::Transform3D<> tf_desired;
+rw::math::Transform3D<> tf_current;
+
+Eigen::MatrixXd tf_current_matrix;
+
+
+//q solution
+std::vector<rw::math::Q> solutions;
 
 #endif /* UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */
