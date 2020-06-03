@@ -56,6 +56,7 @@
 #include "sdu_math/control_function.h"
 #include "ur10e_force_torque_sensor_test/task_motion.h"
 
+
 #define CLOCK_RES 1e-9 //Clock resolution is 1 us by default 1e-9
 #define LOOP_PERIOD 2e6 //Expressed in ticks // 2ms control time
 //RTIME period = 1000000000;
@@ -72,6 +73,8 @@ using rw::loaders::WorkCellLoader;
 void initialize();
 
 bool gazebo_check;
+
+ofstream out("test.csv");
 
 //std::shared_ptr<FTfilter> ft_filter;
 std::shared_ptr<ToolEstimation> tool_estimation;
@@ -139,17 +142,15 @@ std_msgs::Float64 gazebo_wrist_1_position_msg;
 std_msgs::Float64 gazebo_wrist_2_position_msg;
 std_msgs::Float64 gazebo_wrist_3_position_msg;
 
-//void RawForceTorqueDataMsgCallBack(const std_msgs::Float64MultiArray::ConstPtr& msg);
-//void ZeroCommandMsgCallBack(const std_msgs::Bool::ConstPtr& msg);
-
 void CommandDataMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg);
 void TaskCommandDataMsgCallBack (const std_msgs::String::ConstPtr& msg);
 void PidGainCommandMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg);
 
 //for ros test
-std::vector<double> joint_vector;
 std::vector<double> desired_pose_vector;
-bool zero_command;
+std::vector<double> compensated_pose_vector;
+
+//task motion
 std::string task_command;
 
 //tf
@@ -162,8 +163,6 @@ Eigen::MatrixXd tf_current_matrix;
 double f_kp;
 double f_ki;
 double f_kd;
-
-
 
 //q solution
 std::vector<rw::math::Q> solutions;
