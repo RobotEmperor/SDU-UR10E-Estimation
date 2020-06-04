@@ -14,6 +14,9 @@ const SerialDevice::Ptr device = wc->findDevice<SerialDevice>("UR10e");
 void loop_task_proc(void *arg)
 {
   double previous_t = 0.0;
+  int sum_count = 0;
+  double sum_delayed_time = 0.0;
+  double aver_delayed_time = 0.0;
   double axis_angle_x,axis_angle_y,axis_angle_z;
   axis_angle_x = 0;
   axis_angle_y = 0;
@@ -72,18 +75,29 @@ void loop_task_proc(void *arg)
   usleep(3000000);
 
   while(1){
-    if((rt_timer_read() - tstart)/1000000.0  - previous_t > (control_time*1000 + 0.15)) //
+    //    if((rt_timer_read() - tstart)/1000000.0  - previous_t > (control_time*1000 + 0.15))
+    //    {
+    //      printf("delayed Loop time: %.5f ms\n",((rt_timer_read() - tstart)/1000000.0  - previous_t) - control_time*1000);
+    //    }
+    sum_delayed_time += ((rt_timer_read() - tstart)/1000000.0  - previous_t) - control_time*1000;
+    if(sum_count%1500 == 0 && sum_count != 0) // every 3 seconds,
     {
-      printf("delayed Loop time: %.5f ms\n",((rt_timer_read() - tstart)/1000000.0  - previous_t) - control_time*1000);
+      aver_delayed_time = sum_delayed_time/sum_count;
+      printf("Average delayed time in 5s: %.5f ms\n",aver_delayed_time);
+      sum_delayed_time = 0;
+      sum_count = 0;
     }
     previous_t = (rt_timer_read() - tstart)/1000000.0;
     time_count += 0.002;
+    sum_count += 1;
 
     //controller algorithm
-    //ur10e_task->run_task_motion();
+    ur10e_task->run_task_motion();
+
+    ur10e_task->generate_trajectory();
     //
     ////motion reference
-    //desired_pose_vector = ur10e_task->get_current_pose();
+    desired_pose_vector = ur10e_task->get_current_pose();
 
     axis_angle_x = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(1,0);
     axis_angle_y = ur10e_kinematics->get_rotation_matrix_to_axis(ur10e_kinematics->desired_rotation_matrix_xd(desired_pose_vector[3],desired_pose_vector[4],desired_pose_vector[5]))(2,0);
@@ -99,6 +113,7 @@ void loop_task_proc(void *arg)
       force_data            = rtde_receive->getActualTCPForce();
       tool_linear_acc_data  = rtde_receive->getActualToolAccelerometer();
       tcp_pose_data         = rtde_receive->getActualTCPPose();
+      joint_positions       = rtde_receive->getActualQ();
 
       // data types will be changed
       for(int var = 0; var < 6; var ++)
@@ -131,35 +146,50 @@ void loop_task_proc(void *arg)
       //force_z_compensator->set_pid_gain(f_kp,f_ki,f_kd);
 
 
-      force_x_compensator->PID_calculate(4,contacted_force_data(0,0));
+      force_x_compensator->PID_calculate(-4,contacted_force_data(0,0));
       //force_y_compensator->PID_calculate(1,contacted_force_data(1,0));
       //force_z_compensator->PID_calculate(1,contacted_force_data(2,0));
 
       compensated_pose_vector[0] = desired_pose_vector[0] + force_x_compensator->get_final_output();
+      compensated_pose_vector[1] = desired_pose_vector[1]; //+ force_x_compensator->get_final_output();
+      compensated_pose_vector[2] = desired_pose_vector[2]; //+ force_x_compensator->get_final_output();
 
-      if(compensated_pose_vector[0] < -0.42)
-        compensated_pose_vector[0] = -0.42;
+      compensated_pose_vector[3] = desired_pose_vector[3]; //+ force_x_compensator->get_final_output();
+      compensated_pose_vector[4] = desired_pose_vector[4]; //+ force_x_compensator->get_final_output();
+      compensated_pose_vector[5] = desired_pose_vector[5]; //+ force_x_compensator->get_final_output();
 
-      if(compensated_pose_vector[0] > -0.39361)
-        compensated_pose_vector[0] = -0.39361;
+      if(compensated_pose_vector[0] < -0.43)
+        compensated_pose_vector[0] = -0.43;
 
-      //rtde_control->servoL(desired_pose_vector,0,0,0.002,0.04,100);
+      if(compensated_pose_vector[0] > -0.38361)
+        compensated_pose_vector[0] = -0.38361;
+
+      rtde_control->servoL(compensated_pose_vector,0,0,0.002,0.04,100);
 
       //ros communication
-      raw_force_torque_data_msg.data.push_back(force_x_compensator->get_final_output());
-      raw_force_torque_data_msg.data.push_back(desired_pose_vector[0]);
-      //raw_force_torque_data_msg.data.push_back(raw_force_torque_data(0,0));
-      //raw_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
-      //raw_force_torque_data_msg.data.push_back(raw_force_torque_data(2,0));
+      test_data_msg.data.push_back(force_x_compensator->get_final_output());
+      test_data_msg.data.push_back(compensated_pose_vector[0]);
+
+      raw_force_torque_data_msg.data.push_back(raw_force_torque_data(0,0));
+      raw_force_torque_data_msg.data.push_back(raw_force_torque_data(1,0));
+      raw_force_torque_data_msg.data.push_back(raw_force_torque_data(2,0));
+      raw_force_torque_data_msg.data.push_back(raw_force_torque_data(3,0));
+      raw_force_torque_data_msg.data.push_back(raw_force_torque_data(4,0));
+      raw_force_torque_data_msg.data.push_back(raw_force_torque_data(5,0));
 
       filtered_force_torque_data_msg.data.push_back(contacted_force_data(0,0));
       filtered_force_torque_data_msg.data.push_back(contacted_force_data(1,0));
       filtered_force_torque_data_msg.data.push_back(contacted_force_data(2,0));
+      filtered_force_torque_data_msg.data.push_back(contacted_force_data(3,0));
+      filtered_force_torque_data_msg.data.push_back(contacted_force_data(4,0));
+      filtered_force_torque_data_msg.data.push_back(contacted_force_data(5,0));
 
+      test_data_pub.publish(test_data_msg);
       raw_force_torque_data_pub.publish(raw_force_torque_data_msg);
       filtered_force_torque_data_pub.publish(filtered_force_torque_data_msg);
       filtered_force_torque_data_msg.data.clear();
       raw_force_torque_data_msg.data.clear();
+      test_data_msg.data.clear();
 
       //data recording
       for(int num = 0; num<6; num++)
@@ -199,11 +229,11 @@ void loop_task_proc(void *arg)
       getActualToolAcc = "";
       getActualQ = "";
 
-      joint_cur_value_pub.publish(joint_cur_value_msg);
-      ee_cur_value_pub.publish(ee_cur_value_msg);
-
-      joint_cur_value_msg.data.clear();
-      ee_cur_value_msg.data.clear();
+      //      joint_cur_value_pub.publish(joint_cur_value_msg);
+      //      ee_cur_value_pub.publish(ee_cur_value_msg);
+      //
+      //      joint_cur_value_msg.data.clear();
+      //      ee_cur_value_msg.data.clear();
     }
     if(gazebo_check)
     {
@@ -222,14 +252,14 @@ void loop_task_proc(void *arg)
       gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
     }
 
-    for(int num= 0; num  < 6; num ++)
-      joint_cur_value_msg.data.push_back(solutions[3].toStdVector()[num]);
-
-    for(int num= 0; num  < 3; num ++)
-      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
-
-    for(int num= 0; num  < 3; num ++)
-      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(axis_angle_x,axis_angle_y,axis_angle_z)(num,0)*RADIAN2DEGREE);
+    //    for(int num= 0; num  < 6; num ++)
+    //      joint_cur_value_msg.data.push_back(solutions[3].toStdVector()[num]);
+    //
+    //    for(int num= 0; num  < 3; num ++)
+    //      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
+    //
+    //    for(int num= 0; num  < 3; num ++)
+    //      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(axis_angle_x,axis_angle_y,axis_angle_z)(num,0)*RADIAN2DEGREE);
 
     ros::spinOnce();
 
@@ -296,9 +326,9 @@ void initialize()
   ur10e_kinematics = std::make_shared<Kinematics>();
   ur10e_traj = std::make_shared<CalRad>();
   ur10e_task = std::make_shared<TaskMotion>();
-  force_x_compensator = std::make_shared<PID_function>(control_time, 0.001, -0.001, 0, 0, 0);
-  force_y_compensator = std::make_shared<PID_function>(control_time, 0.001, -0.001, 0, 0, 0);
-  force_z_compensator = std::make_shared<PID_function>(control_time, 0.001, -0.001, 0, 0, 0);
+  force_x_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0);
+  force_y_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0);
+  force_z_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0);
 
   //kinematics
   ur10e_kinematics->set_dh_parameter(0.1807, -0.6127, -0.57155, 0.17415, 0.11985, 0.11655);
@@ -310,7 +340,13 @@ void initialize()
 
   //motion task
   ur10e_task->initialize(control_time);
-  ur10e_task->set_initial_pose(-0.5, 0.184324, 0.5875, -180*DEGREE2RADIAN, 0, 0); // set to be robot initial values
+
+  //robot A
+  ur10e_task->set_initial_pose(-0.41361, 0.03022, 0.45822, 3.1407013, -0.0000095, 1.5698958); // set to be robot initial values
+
+  //robot B
+  //ur10e_task->set_initial_pose(-0.5, 0.184324, 0.5875, -180*DEGREE2RADIAN, 0, 0); // set to be robot initial values
+
   motion_time = 5;
 
   tcp_pose.resize(6,1);
@@ -322,12 +358,12 @@ void initialize()
   task_command = "";
 
   //robot A
-  desired_pose_matrix(0,1) = -0.5;
-  desired_pose_matrix(1,1) = 0.184324;
-  desired_pose_matrix(2,1) = 0.5875;
-  desired_pose_matrix(3,1) = -180*DEGREE2RADIAN;
-  desired_pose_matrix(4,1) = 0;
-  desired_pose_matrix(5,1) = 0;
+  //  desired_pose_matrix(0,1) = -0.5;
+  //  desired_pose_matrix(1,1) = 0.184324;
+  //  desired_pose_matrix(2,1) = 0.5875;
+  //  desired_pose_matrix(3,1) = -180*DEGREE2RADIAN;
+  //  desired_pose_matrix(4,1) = 0;
+  //  desired_pose_matrix(5,1) = 0;
 
   //ft sensor
   raw_force_torque_data.resize(6,1);
@@ -337,6 +373,9 @@ void initialize()
   tool_acc_data.fill(0);
   tool_acc_data(3,0)=1;
 
+  contacted_force_data.resize(6,1);
+  contacted_force_data.fill(0);
+
   // initial and compensated pose load
   desired_pose_vector.resize(6);
   compensated_pose_vector.resize(6);
@@ -345,13 +384,7 @@ void initialize()
     compensated_pose_vector[num] = 0;
 
   // real robot
-  //robot B
-  //  desired_pose_vector[0] = -0.5;
-  //  desired_pose_vector[1] = 0.184324;
-  //  desired_pose_vector[2] = 0.5875;
-  //  desired_pose_vector[3] = -180*DEGREE2RADIAN;
-  //  desired_pose_vector[4] = 0;
-  //  desired_pose_vector[5] = 0;
+
   //robot A
   desired_pose_vector[0] = -0.41361;
   desired_pose_vector[1] = 0.03022;
@@ -360,22 +393,38 @@ void initialize()
   desired_pose_vector[4] = 2.220;
   desired_pose_vector[5] = 0.001;
 
+  //robot B
+  //  desired_pose_vector[0] = -0.5;
+  //  desired_pose_vector[1] = 0.184324;
+  //  desired_pose_vector[2] = 0.5875;
+  //  desired_pose_vector[3] = -180*DEGREE2RADIAN;
+  //  desired_pose_vector[4] = 0;
+  //  desired_pose_vector[5] = 0;
+
   // force controller
   f_kp = 0;
   f_ki = 0;
   f_kd = 0;
 
   tool_estimation->initialize();
-  tool_estimation ->set_parameters(control_time, 2.52);
+  tool_estimation ->set_parameters(control_time, 1.75);
 
   //gazebo init
-  //robot B
-  gazebo_shoulder_pan_position_msg.data = 3.1213190230795913;
-  gazebo_shoulder_lift_position_msg.data = -1.2650450021126538;
-  gazebo_elbow_position_msg.data = -1.9836958306426968;
-  gazebo_wrist_1_position_msg.data = -1.4640438428275298;
-  gazebo_wrist_2_position_msg.data = 1.5707963268419363;
-  gazebo_wrist_3_position_msg.data = 1.5505226962847685;
+  //robot A
+  gazebo_shoulder_pan_position_msg.data = 3.501201;
+  gazebo_shoulder_lift_position_msg.data = -1.065576;
+  gazebo_elbow_position_msg.data = -2.327992;
+  gazebo_wrist_1_position_msg.data = -1.319489;
+  gazebo_wrist_2_position_msg.data = 1.569016;
+  gazebo_wrist_3_position_msg.data = 0.359797;
+  //
+  //  //robot B
+  //  gazebo_shoulder_pan_position_msg.data = 3.1213190230795913;
+  //  gazebo_shoulder_lift_position_msg.data = -1.2650450021126538;
+  //  gazebo_elbow_position_msg.data = -1.9836958306426968;
+  //  gazebo_wrist_1_position_msg.data = -1.4640438428275298;
+  //  gazebo_wrist_2_position_msg.data = 1.5707963268419363;
+  //  gazebo_wrist_3_position_msg.data = 1.5505226962847685;
 
   //data variables define
   getTargetTCPPose = " target_tcp_pose_x target_tcp_pose_y target_tcp_pose_z target_tcp_pose_r target_tcp_pose_p target_tcp_pose_y";
@@ -436,6 +485,8 @@ int main (int argc, char **argv)
   ee_cur_value_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/ur10e/ee_cur_value", 10);
   raw_force_torque_data_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/ur10e/raw_force_torque_data", 10);
   filtered_force_torque_data_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/ur10e/filtered_force_torque_data", 10);
+
+  test_data_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/ur10e/test_data", 10);
 
   // ros subsrcibe
   ros::Subscriber zero_command_sub;
@@ -505,9 +556,9 @@ int main (int argc, char **argv)
 
   usleep(3000000);
   if(!gazebo_check)
-   {
+  {
     rtde_control->servoStop();
-   }
+  }
   out.close();
   cout << "complete and save" << "\n\n";
   printf("exiting safely\n");

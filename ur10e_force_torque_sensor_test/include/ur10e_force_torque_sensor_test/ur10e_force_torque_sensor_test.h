@@ -117,6 +117,8 @@ string getActualToolSpeed;
 string getActualToolAcc;
 
 //ros
+ros::Publisher test_data_pub;
+
 ros::Publisher filtered_force_torque_data_pub;
 ros::Publisher raw_force_torque_data_pub;
 
@@ -130,6 +132,7 @@ ros::Publisher gazebo_wrist_1_position_pub;
 ros::Publisher gazebo_wrist_2_position_pub;
 ros::Publisher gazebo_wrist_3_position_pub;
 
+std_msgs::Float64MultiArray test_data_msg;
 std_msgs::Float64MultiArray raw_force_torque_data_msg;
 std_msgs::Float64MultiArray filtered_force_torque_data_msg;
 std_msgs::Float64MultiArray joint_cur_value_msg;
