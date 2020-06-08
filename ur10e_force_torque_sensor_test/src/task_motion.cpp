@@ -88,7 +88,7 @@ void TaskMotion::load_task_motion(std::string path_)
     }
     for(int num = 3; num < 6; num++)
     {
-      temp_motion_task_pose_vector.push_back(it->second[num].as<double>()*DEGREE2RADIAN);
+      temp_motion_task_pose_vector.push_back(it->second[num].as<double>());
     }
     motion_task_pose_vector[point_numbers] = temp_motion_task_pose_vector;
     temp_motion_task_pose_vector.clear();
@@ -107,6 +107,120 @@ void TaskMotion::load_task_motion(std::string path_)
   temp_motion_task_vel_vector.clear();
 
   std::cout << "LOAD Cmplete" << std::endl;
+}
+void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
+{
+  YAML::Node doc; //
+  try
+  {
+    // load yaml
+    doc = YAML::LoadFile(load_path_.c_str());
+  }catch(const std::exception& e)
+  {
+    std::cout << COLOR_RED_BOLD << "Fail to load data, yaml file!" << COLOR_RESET << std::endl;
+    return;
+  }
+
+  // motion data load initialize//
+  YAML::Node motion_start_time_node = doc["motion_start_time"];
+  YAML::Node motion_task_node = doc["motion_task"];
+  YAML::Node force_node = doc["desired_force"];
+
+  std::vector<double> temp_motion_start_time_vector;
+  std::vector<double> temp_motion_task_pose_vector;
+  std::vector<double> temp_motion_task_vel_vector;
+  std::vector<double> temp_force_node_vector;
+
+  int point_numbers;
+  point_numbers = 0;
+
+  //time
+  for (YAML::iterator it = motion_start_time_node.begin(); it != motion_start_time_node.end(); ++it)
+  {
+    point_numbers = it->first.as<int>();
+    temp_motion_start_time_vector.push_back(it->second[0].as<double>());
+    motion_start_time_vector[point_numbers] = temp_motion_start_time_vector;
+    temp_motion_start_time_vector.clear();
+  }
+  //points
+  for (YAML::iterator it = motion_task_node.begin(); it != motion_task_node.end(); ++it)
+  {
+    point_numbers = it->first.as<int>();
+    for(int num = 0; num < 3; num++)
+    {
+      temp_motion_task_pose_vector.push_back(it->second[num].as<double>());
+    }
+    for(int num = 3; num < 6; num++)
+    {
+      temp_motion_task_pose_vector.push_back(it->second[num].as<double>());
+    }
+    tcp_motion_task_pose_vector[point_numbers] = temp_motion_task_pose_vector;
+    motion_task_pose_vector[point_numbers] = temp_motion_task_pose_vector;
+    temp_motion_task_pose_vector.clear();
+
+    all_point ++;
+  }
+  //force
+  for (YAML::iterator it = force_node.begin(); it != force_node.end(); ++it)
+  {
+    point_numbers = it->first.as<int>();
+    for(int num = 0; num < 3; num++)
+    {
+      temp_force_node_vector.push_back(it->second[num].as<double>());
+    }
+    tcp_motion_desired_force_vector[point_numbers] = temp_force_node_vector;
+    temp_force_node_vector.clear();
+  }
+
+  //  std::cout << motion_start_time_vector << std::endl;
+  //  std::cout << tcp_motion_task_pose_vector << std::endl;
+  //  std::cout << tcp_motion_desired_force_vector << std::endl;
+
+  //std::map<int, std::vector<double>> base_motion_task_pose_vector;
+  //std::map<int, std::vector<double>> base_motion_desired_force_vector;
+
+  //base_motion_task_pose_vector = tcp_motion_task_pose_vector;
+
+  rw::math::RPY<> rpy;
+
+  for(int num = 0; num < all_point+1; num ++)
+  {
+    rpy = RPY<>(tcp_motion_task_pose_vector[num][3]*DEGREE2RADIAN,tcp_motion_task_pose_vector[num][4]*DEGREE2RADIAN,tcp_motion_task_pose_vector[num][5]*DEGREE2RADIAN);
+
+    tf_tcp_desired_pose_ = Transform3D<> (Vector3D<>(tcp_motion_task_pose_vector[num][0], tcp_motion_task_pose_vector[num][1], tcp_motion_task_pose_vector[num][2]),
+        rpy.toRotation3D());
+
+    tf_desired_ = tf_initial_pose_* tf_tcp_desired_pose_;
+
+    motion_task_pose_vector[num][0] = Vector3D<> (tf_desired_.P())[0];
+    motion_task_pose_vector[num][1] = Vector3D<> (tf_desired_.P())[1];
+    motion_task_pose_vector[num][2] = Vector3D<> (tf_desired_.P())[2];
+
+    motion_task_pose_vector[num][3] = EAA<> (tf_desired_.R())[0];
+    motion_task_pose_vector[num][4] = EAA<> (tf_desired_.R())[1];
+    motion_task_pose_vector[num][5] = EAA<> (tf_desired_.R())[2];
+
+
+//    std::cout << motion_task_pose_vector[num][0]<< std::endl;
+//    std::cout << motion_task_pose_vector[num][1]<< std::endl;
+//    std::cout << motion_task_pose_vector[num][2]<< std::endl;
+//    std::cout << motion_task_pose_vector[num][3]<< std::endl;
+//    std::cout << motion_task_pose_vector[num][4]<< std::endl;
+//    std::cout << motion_task_pose_vector[num][5]<< std::endl;
+
+  }
+  //velocity
+  for(int num = 0; num < 6; num++)
+    temp_motion_task_vel_vector.push_back(0);
+
+  for(int num = 0; num < all_point+1 ; num++)
+  {
+    motion_task_init_vel_vector[num] = temp_motion_task_vel_vector;
+    motion_task_final_vel_vector[num] = temp_motion_task_vel_vector;
+  }
+  temp_motion_task_vel_vector.clear();
+
+  std::cout << "TCP task motion LOAD and Transformation (TCP --> base) Cmplete" << std::endl;
 }
 void TaskMotion::run_task_motion()
 {
@@ -141,7 +255,7 @@ void TaskMotion::run_task_motion()
     }
 
     if(current_point == -1)
-       return;
+      return;
 
     calculate_init_final_velocity(current_point);
 
@@ -212,6 +326,11 @@ void TaskMotion::set_point(double x, double y, double z, double roll, double pit
   {
     desired_pose_matrix(num,7) = time;
   }
+}
+void TaskMotion::set_initial_pose_eaa(double x, double y, double z, double axis_x, double axis_y, double axis_z)
+{
+  tf_initial_pose_ = Transform3D<> (Vector3D<>(x, y, z),
+      EAA<>(axis_x, axis_y, axis_z).toRotation3D());
 }
 void TaskMotion::clear_task_motion()
 {

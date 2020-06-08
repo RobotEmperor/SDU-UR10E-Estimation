@@ -1,0 +1,24 @@
+#seconds
+motion_start_time: 
+  0: [5]
+
+
+
+
+#TCP frame [M] / degree ZYX angle 
+motion_task: 
+  0: [0, 0, 0, 0, -30, 0]
+
+ 
+
+
+
+
+#TCP frame [N]
+desired_force:
+  0: [0,0,0]
+
+
+
+
+

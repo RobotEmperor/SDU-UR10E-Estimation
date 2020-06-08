@@ -1,0 +1,9 @@
+#seconds
+motion_start_time: 
+  0: [7]
+
+#Base frame [mm]
+motion_task: 
+  0: [-0.45581,0.42951,0.27748,-0.728808, -1.75982, 1.75982]
+
+

@@ -151,14 +151,18 @@ void PidGainCommandMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg
 
 //for ros test
 std::vector<double> desired_pose_vector;
+std::vector<double> tcp_desired_pose_vector;
+std::vector<double> tcp_desired_force_vector;
 std::vector<double> compensated_pose_vector;
 
 //task motion
 std::string task_command;
 
 //tf
-rw::math::Transform3D<> tf_desired;
+rw::math::Transform3D<> tf_tcp_desired_pose;
+rw::math::Transform3D<> tf_tcp_desired_force;
 rw::math::Transform3D<> tf_current;
+rw::math::Transform3D<> tf_desired;
 
 Eigen::MatrixXd tf_current_matrix;
 
