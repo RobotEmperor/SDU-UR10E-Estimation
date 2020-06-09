@@ -17,18 +17,15 @@ void loop_task_proc(void *arg)
   int sum_count = 0;
   double sum_delayed_time = 0.0;
   double aver_delayed_time = 0.0;
-  double axis_angle_x,axis_angle_y,axis_angle_z;
-  axis_angle_x = 0;
-  axis_angle_y = 0;
-  axis_angle_z = 0;
 
   if (wc.isNull())
     RW_THROW("WorkCell could not be loaded.");
   if (device.isNull())
     RW_THROW("UR10e device could not be found.");
 
-  const State state = wc->getDefaultState();
-  const ClosedFormIKSolverUR solver(device, state);
+  State state = wc->getDefaultState();
+  ClosedFormIKSolverUR solver(device, state);
+  solver.setCheckJointLimits(true);
 
   RT_TASK *curtask;
   RT_TASK_INFO curtaskinfo;
@@ -99,18 +96,6 @@ void loop_task_proc(void *arg)
     //motion reference
     desired_pose_vector = ur10e_task->get_current_pose();
 
-    tf_desired = Transform3D<> (Vector3D<>(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2]),
-        EAA<>(desired_pose_vector[3], desired_pose_vector[4], desired_pose_vector[5]).toRotation3D());
-    //
-    const std::vector<Q> solutions = solver.solve(tf_desired, state);
-
-//        cout << "Found" << solutions.size() << "solutions." << endl;
-//
-//        for(std::size_t i = 0; i<solutions.size(); i ++)
-//        {
-//          cout << i << " " << solutions[i] << endl;
-//        }
-
     if(!gazebo_check)
     {
       force_data            = rtde_receive->getActualTCPForce();
@@ -153,22 +138,6 @@ void loop_task_proc(void *arg)
       //force_y_compensator->PID_calculate(1,contacted_force_data(1,0));
       //force_z_compensator->PID_calculate(1,contacted_force_data(2,0));
 
-      compensated_pose_vector[0] = desired_pose_vector[0]; //+ force_x_compensator->get_final_output();
-      compensated_pose_vector[1] = desired_pose_vector[1]; //+ force_x_compensator->get_final_output();
-      compensated_pose_vector[2] = desired_pose_vector[2]; //+ force_x_compensator->get_final_output();
-
-      compensated_pose_vector[3] = desired_pose_vector[3]; //+ force_x_compensator->get_final_output();
-      compensated_pose_vector[4] = desired_pose_vector[4]; //+ force_x_compensator->get_final_output();
-      compensated_pose_vector[5] = desired_pose_vector[5]; //+ force_x_compensator->get_final_output();
-
-      //      if(compensated_pose_vector[0] < -0.43)
-      //        compensated_pose_vector[0] = -0.43;
-      //
-      //      if(compensated_pose_vector[0] > -0.38361)
-      //        compensated_pose_vector[0] = -0.38361;
-
-      //rtde_control->servoL(compensated_pose_vector,0,0,0.002,0.04,100);
-
       //ros communication
       test_data_msg.data.push_back(force_x_compensator->get_final_output());
       test_data_msg.data.push_back(compensated_pose_vector[0]);
@@ -194,27 +163,6 @@ void loop_task_proc(void *arg)
       raw_force_torque_data_msg.data.clear();
       test_data_msg.data.clear();
 
-      //test
-      //gazebo_shoulder_pan_position_msg.data = solutions[3].toStdVector()[0];
-      //gazebo_shoulder_lift_position_msg.data = solutions[3].toStdVector()[1];
-      //gazebo_elbow_position_msg.data = solutions[3].toStdVector()[2];
-      //gazebo_wrist_1_position_msg.data = solutions[3].toStdVector()[3];
-      //gazebo_wrist_2_position_msg.data = solutions[3].toStdVector()[4];
-      //gazebo_wrist_3_position_msg.data = solutions[3].toStdVector()[5];
-      ////
-      //gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
-      //gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
-      //gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
-      //gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
-      //gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
-      //gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
-
-      //joint_cur_value_pub.publish(joint_cur_value_msg);
-      //ee_cur_value_pub.publish(ee_cur_value_msg);
-      //
-      //joint_cur_value_msg.data.clear();
-      //ee_cur_value_msg.data.clear();
-
       //data recording
       for(int num = 0; num<6; num++)
       {
@@ -238,51 +186,98 @@ void loop_task_proc(void *arg)
         getTargetTCPPose += " "+to_string(0);
       }
     }
-    if(gazebo_check)
-    {
-      gazebo_shoulder_pan_position_msg.data = solutions[1].toStdVector()[0];
-      gazebo_shoulder_lift_position_msg.data = solutions[1].toStdVector()[1];
-      gazebo_elbow_position_msg.data = solutions[1].toStdVector()[2];
-      gazebo_wrist_1_position_msg.data = solutions[1].toStdVector()[3];
-      gazebo_wrist_2_position_msg.data = solutions[1].toStdVector()[4];
-      gazebo_wrist_3_position_msg.data = solutions[1].toStdVector()[5];
 
-      gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
-      gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
-      gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
-      gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
-      gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
-      gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+    compensated_pose_vector[0] = desired_pose_vector[0] + force_x_compensator->get_final_output();
+    compensated_pose_vector[1] = desired_pose_vector[1]; //+ force_x_compensator->get_final_output();
+    compensated_pose_vector[2] = desired_pose_vector[2]; //+ force_x_compensator->get_final_output();
+
+    compensated_pose_vector[3] = desired_pose_vector[3]; //+ force_x_compensator->get_final_output();
+    compensated_pose_vector[4] = desired_pose_vector[4]; //+ force_x_compensator->get_final_output();
+    compensated_pose_vector[5] = desired_pose_vector[5]; //+ force_x_compensator->get_final_output();
+
+    //    if(compensated_pose_vector[0] < -0.43)
+    //      compensated_pose_vector[0] = -0.43;
+    //
+    //    if(compensated_pose_vector[0] > -0.38361)
+    //      compensated_pose_vector[0] = -0.38361;
+
+    tf_desired = Transform3D<> (Vector3D<>(compensated_pose_vector[0], compensated_pose_vector[1], compensated_pose_vector[2]),
+        EAA<>(compensated_pose_vector[3], compensated_pose_vector[4], compensated_pose_vector[5]).toRotation3D());
+    //
+    std::vector<Q> solutions = solver.solve(tf_desired, state);
+
+
+    //from covid - robot
+    for (unsigned int num = 0; num < 6; num ++)
+    {
+      // LOG_DEBUG("[%s]", "Wrapping for joint");
+      const double diffOrig = fabs(current_Q[num] - solutions[1][num]);
+      // LOG_DEBUG("[diffOrig: %e , %e]", (solutions[i][j])/rw::math::Pi*180.0, diffOrig );
+
+      const double diffAdd = fabs(current_Q[num] - (solutions[1][num] + 2 * rw::math::Pi));
+      // LOG_DEBUG("[diffAdd: %e , %e]", (solutions[i][j]+2*rw::math::Pi)/rw::math::Pi*180.0, diffAdd );
+
+      const double diffSub = fabs(current_Q[num] - (solutions[1][num] - 2 * rw::math::Pi));
+      // LOG_DEBUG("[diffSub: %e , %e]", (solutions[i][j]-2*rw::math::Pi)/rw::math::Pi*180.0, diffSub );
+
+      if (diffAdd < diffOrig && diffAdd < diffSub)
+      {
+        solutions[1][num] += 2 * rw::math::Pi;
+      }
+      else if (diffSub < diffOrig && diffSub < diffAdd)
+      {
+        solutions[1][num] -= 2 * rw::math::Pi;
+      }
+    }
+    //
+
+
+    for(int num = 0; num <6 ; num ++)
+    {
+      if(fabs((solutions[1].toStdVector()[num] - current_Q[num])/control_time) > 45*DEGREE2RADIAN)
+      {
+        cout << "::" << num << "::" << fabs((solutions[1].toStdVector()[num] - current_Q[num])/control_time) << endl;
+        std::cout << COLOR_RED_BOLD << "Robot speed is so FAST" << COLOR_RESET << std::endl;
+        joint_vel_limits = true;
+      }
     }
 
-    //data recording
-    //    for(int num = 0; num<6; num++)
-    //    {
-    //      getActualTCPForce += " "+to_string(0);
-    //      getFilteredForce += " "+to_string(0);
-    //      getContactedForceTorque += " "+to_string(0);
-    //      getActualQ +=" "+to_string(0);
-    //    }
-    //    for(int num = 0; num<3; num++)
-    //    {
-    //      getActualToolAccelerometer += " "+to_string(tool_acc_data(num,0));
-    //      getTargetTCPPose += " "+to_string(0);
-    //      getActualTCPPose += " "+to_string(tcp_pose(num,0));
-    //      getActualToolSpeed +=" "+to_string(0);
-    //      getActualToolAcc +=" "+to_string(0);
-    //
-    //    }
-    //    for(int num = 0; num<3; num++)
-    //    {
-    //      getActualTCPPose += " "+to_string(0);
-    //      getTargetTCPPose += " "+to_string(0);
-    //    }
+    if(!joint_vel_limits)
+    {
+      if(!gazebo_check)
+      {
+        rtde_control->servoJ(solutions[1].toStdVector(),0,0,0.002,0.04,100);
+      }
+      else
+      {
+
+        gazebo_shoulder_pan_position_msg.data = solutions[1].toStdVector()[0];
+        gazebo_shoulder_lift_position_msg.data = solutions[1].toStdVector()[1];
+        gazebo_elbow_position_msg.data = solutions[1].toStdVector()[2];
+        gazebo_wrist_1_position_msg.data = solutions[1].toStdVector()[3];
+        gazebo_wrist_2_position_msg.data = solutions[1].toStdVector()[4];
+        gazebo_wrist_3_position_msg.data = solutions[1].toStdVector()[5];
+
+
+        gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
+        gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
+        gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
+        gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
+        gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
+        gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+
+      }
+      for(int num = 0; num <6 ; num ++)
+      {
+        current_Q[num] = solutions[1].toStdVector()[num];
+      }
+    }
+
 
     data_line = to_string(time_count)+getTargetTCPPose+getActualTCPPose+getActualTCPForce+getFilteredForce+getContactedForceTorque+
         getActualToolAccelerometer+getActualToolSpeed+getActualToolAcc+getActualQ+"\n";
 
     out.write(data_line.c_str(),data_line.size());
-    //out<<data_line<<endl;
 
     getTargetTCPPose = "";
     getActualTCPPose = "";
@@ -293,15 +288,6 @@ void loop_task_proc(void *arg)
     getActualToolSpeed = "";
     getActualToolAcc = "";
     getActualQ = "";
-
-    //    for(int num= 0; num  < 6; num ++)
-    //      joint_cur_value_msg.data.push_back(solutions[3].toStdVector()[num]);
-    //
-    //    for(int num= 0; num  < 3; num ++)
-    //      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_tf_base_to_tool()(num,3));
-    //
-    //    for(int num= 0; num  < 3; num ++)
-    //      ee_cur_value_msg.data.push_back(ur10e_kinematics->get_axis_to_euler_angle(axis_angle_x,axis_angle_y,axis_angle_z)(num,0)*RADIAN2DEGREE);
 
     ros::spinOnce();
 
@@ -369,7 +355,6 @@ void initialize()
   control_time = 0.002;
   tool_estimation = std::make_shared<ToolEstimation>();
 
-  ur10e_kinematics = std::make_shared<Kinematics>();
   ur10e_traj = std::make_shared<CalRad>();
   ur10e_task = std::make_shared<TaskMotion>();
   force_x_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0);
@@ -377,7 +362,6 @@ void initialize()
   force_z_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0);
 
   //kinematics
-  ur10e_kinematics->set_dh_parameter(0.1807, -0.6127, -0.57155, 0.17415, 0.11985, 0.11655);
   tf_current_matrix.resize(4,4);
   tf_current_matrix.fill(0);
 
@@ -439,19 +423,19 @@ void initialize()
   // real robot
 
   //robot A
-//  desired_pose_vector[0] = -0.41361;
-//  desired_pose_vector[1] = 0.03022;
-//  desired_pose_vector[2] = 0.45822;
-//  desired_pose_vector[3] = 2.222;
-//  desired_pose_vector[4] = 2.220;
-//  desired_pose_vector[5] = 0.001;
+  //  desired_pose_vector[0] = -0.41361;
+  //  desired_pose_vector[1] = 0.03022;
+  //  desired_pose_vector[2] = 0.45822;
+  //  desired_pose_vector[3] = 2.222;
+  //  desired_pose_vector[4] = 2.220;
+  //  desired_pose_vector[5] = 0.001;
 
-    desired_pose_vector[0] = -0.45581;
-    desired_pose_vector[1] = 0.42951;
-    desired_pose_vector[2] = 0.27748;
-    desired_pose_vector[3] = -0.728808;
-    desired_pose_vector[4] = -1.75982;
-    desired_pose_vector[5] = 1.75982;
+  desired_pose_vector[0] = -0.45581;
+  desired_pose_vector[1] = 0.42951;
+  desired_pose_vector[2] = 0.27748;
+  desired_pose_vector[3] = -0.728808;
+  desired_pose_vector[4] = -1.75982;
+  desired_pose_vector[5] = 1.75982;
 
 
   //robot B
@@ -472,23 +456,34 @@ void initialize()
 
   //gazebo init
   //robot A
-  gazebo_shoulder_pan_position_msg.data = 142.11*DEGREE2RADIAN;
-  gazebo_shoulder_lift_position_msg.data = -106.65*DEGREE2RADIAN;
-  gazebo_elbow_position_msg.data = -113.72*DEGREE2RADIAN;
-  gazebo_wrist_1_position_msg.data = -140.29*DEGREE2RADIAN;
-  gazebo_wrist_2_position_msg.data = 187.04*DEGREE2RADIAN;
-  gazebo_wrist_3_position_msg.data = -180.68*DEGREE2RADIAN;
+  gazebo_shoulder_pan_position_msg.data = 2.47941;
+  gazebo_shoulder_lift_position_msg.data = -1.85904;
+  gazebo_elbow_position_msg.data = -1.98852;
+  gazebo_wrist_1_position_msg.data = -2.43477;
+  gazebo_wrist_2_position_msg.data = -3.01825;
+  gazebo_wrist_3_position_msg.data = -3.141;
+
+  current_Q[0] = 2.47941;
+  current_Q[1] = -1.85904;
+  current_Q[2] = -1.98852;
+  current_Q[3] = -2.43477;
+  current_Q[4] = -3.01825;
+  current_Q[5] = -3.141;
+
+
+  joint_vel_limits = false;
+
 
   //initial position
 
-//  0 Q[6]{2.47941, 2.5424, 1.98852, 1.75312, -3.01825, -3.141}
-//  1 Q[6]{2.47941, -1.85904, -1.98852, -2.43477, -3.01825, -3.141}
-//  2 Q[6]{2.47941, 2.13072, 2.06185, -1.05013, 3.01825, 0.000591903}
-//  3 Q[6]{2.47941, -2.20645, -2.06185, 1.12756, 3.01825, 0.000591903}
-//  4 Q[6]{-1.21905, -1.28237, 1.98827, -0.705646, -0.433526, 3.14111}
-//  5 Q[6]{-1.21905, 0.599148, -1.98827, 1.38937, -0.433526, 3.14111}
-//  6 Q[6]{-1.21905, -0.935248, 2.06211, 2.01498, 0.433526, -0.000478964}
-//  7 Q[6]{-1.21905, 1.01099, -2.06211, -2.09022, 0.433526, -0.000478964}
+  //  0 Q[6]{2.47941, 2.5424, 1.98852, 1.75312, -3.01825, -3.141}
+  //  1 Q[6]{2.47941, -1.85904, -1.98852, -2.43477, -3.01825, -3.141}
+  //  2 Q[6]{2.47941, 2.13072, 2.06185, -1.05013, 3.01825, 0.000591903}
+  //  3 Q[6]{2.47941, -2.20645, -2.06185, 1.12756, 3.01825, 0.000591903}
+  //  4 Q[6]{-1.21905, -1.28237, 1.98827, -0.705646, -0.433526, 3.14111}
+  //  5 Q[6]{-1.21905, 0.599148, -1.98827, 1.38937, -0.433526, 3.14111}
+  //  6 Q[6]{-1.21905, -0.935248, 2.06211, 2.01498, 0.433526, -0.000478964}
+  //  7 Q[6]{-1.21905, 1.01099, -2.06211, -2.09022, 0.433526, -0.000478964}
 
 
   //
@@ -604,23 +599,8 @@ int main (int argc, char **argv)
     std::cout << COLOR_YELLOW_BOLD << "Robot connected to your program" << COLOR_RESET << std::endl;
     std::cout << COLOR_RED_BOLD << "Robot will move 2 seconds later" << COLOR_RESET << std::endl;
     usleep(2000000);
-    //rtde_control->moveL(desired_pose_vector,0.1,0.1); // move to initial pose
+    rtde_control->moveL(desired_pose_vector,0.1,0.1); // move to initial pose
     std::cout << COLOR_RED_BOLD << "Send" << COLOR_RESET << std::endl;
-
-    //test
-    //    gazebo_shoulder_pan_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_pan_position/command", 10);
-    //    gazebo_shoulder_lift_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_lift_position/command", 10);
-    //    gazebo_elbow_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/elbow_position/command", 10);
-    //    gazebo_wrist_1_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_1_position/command", 10);
-    //    gazebo_wrist_2_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_2_position/command", 10);
-    //    gazebo_wrist_3_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_3_position/command", 10);
-    //
-    //    gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
-    //    gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
-    //    gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
-    //    gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
-    //    gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
-    //    gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
 
     usleep(2000000);
   }

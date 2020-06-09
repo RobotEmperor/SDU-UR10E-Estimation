@@ -78,7 +78,6 @@ ofstream out("test.csv");
 
 //std::shared_ptr<FTfilter> ft_filter;
 std::shared_ptr<ToolEstimation> tool_estimation;
-std::shared_ptr<Kinematics> ur10e_kinematics;
 std::shared_ptr<CalRad> ur10e_traj;
 std::shared_ptr<TaskMotion> ur10e_task;
 std::shared_ptr<PID_function> force_x_compensator;
@@ -173,5 +172,9 @@ double f_kd;
 
 //q solution
 std::vector<rw::math::Q> solutions;
+std::vector<double> current_Q(6);
+
+//solution check
+bool joint_vel_limits;
 
 #endif /* UR10E_FORCE_TORQUE_SENSOR_TEST_H_ */

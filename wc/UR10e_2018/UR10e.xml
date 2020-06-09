@@ -1,7 +1,7 @@
 <SerialDevice name="UR10e">
 	<Frame name="Base" />
 
-	<!-- Include either DHParam.xml or PosRPYParam.xml -->
+	<!-- Include either DHParam.xml or PosRPYParam.xml 0.11655  -->
 	<Include file="DHParam.xml" />
 
 	<Frame name="Flange" refframe="Joint5">
@@ -9,26 +9,26 @@
 		<Pos>0 0 0.11655</Pos>
 	</Frame>
 
-	<PosLimit refjoint="Joint0" min="-360" max="360" />
-	<PosLimit refjoint="Joint1" min="-450" max="270" />
+	<PosLimit refjoint="Joint1" min="-360" max="360" />
 	<PosLimit refjoint="Joint2" min="-360" max="360" />
-	<PosLimit refjoint="Joint3" min="-450" max="270" />
-	<PosLimit refjoint="Joint4" min="-360" max="360" />
-	<PosLimit refjoint="Joint5" min="-1080" max="1080" />
+	<PosLimit refjoint="Joint3" min="-360" max="360" />
+	<PosLimit refjoint="Joint4" min="-360" max="360" /> <!-- 360 -->
+	<PosLimit refjoint="Joint5" min="-360" max="360" /> <!-- 360 -->
+	<PosLimit refjoint="Joint6" min="-360" max="360" /> <!-- Unlimited! 1080-->
 
-	<VelLimit refjoint="Joint0" max="120" />
-	<VelLimit refjoint="Joint1" max="120" />
-	<VelLimit refjoint="Joint2" max="180" />
-	<VelLimit refjoint="Joint3" max="180" />
-	<VelLimit refjoint="Joint4" max="180" />
-	<VelLimit refjoint="Joint5" max="180" />
+	<VelLimit refjoint="Joint1" max="180" /> <!-- 180 -->
+	<VelLimit refjoint="Joint2" max="180" /> <!-- 180 -->
+	<VelLimit refjoint="Joint3" max="180" /> <!-- 180 -->
+	<VelLimit refjoint="Joint4" max="180" /> <!-- 360 -->
+	<VelLimit refjoint="Joint5" max="180" /> <!-- 360 -->
+	<VelLimit refjoint="Joint6" max="180" /> <!-- 360 -->
 
-	<AccLimit refjoint="Joint0" max="120" />
 	<AccLimit refjoint="Joint1" max="120" />
 	<AccLimit refjoint="Joint2" max="120" />
 	<AccLimit refjoint="Joint3" max="120" />
 	<AccLimit refjoint="Joint4" max="120" />
 	<AccLimit refjoint="Joint5" max="120" />
+	<AccLimit refjoint="Joint6" max="120" />
 
 	<Drawable name="flangeGeo" refframe="Base">
 		<RPY>0 0 90</RPY>
