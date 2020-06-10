@@ -102,7 +102,7 @@ void loop_task_proc(void *arg)
       force_data            = rtde_receive->getActualTCPForce();
       tool_linear_acc_data  = rtde_receive->getActualToolAccelerometer();
       tcp_pose_data         = rtde_receive->getActualTCPPose();
-      joint_positions       = rtde_receive->getActualQ();
+      //joint_positions       = rtde_receive->getActualQ();
 
       // data types will be changed
       for(int var = 0; var < 6; var ++)
@@ -172,7 +172,7 @@ void loop_task_proc(void *arg)
         getActualTCPForce += " "+to_string(raw_force_torque_data(num,0));
         getFilteredForce += " "+to_string(contacted_force_data(num,0));
         getContactedForceTorque += " "+to_string(contacted_force_data(num,0));
-        getActualQ +=" "+to_string(joint_positions[num]);
+        getActualQ +=" "+to_string(0);
       }
       for(int num = 0; num<3; num++)
       {
@@ -233,8 +233,6 @@ void loop_task_proc(void *arg)
         solutions[1][num] -= 2 * rw::math::Pi;
       }
     }
-    //
-
 
     for(int num = 0; num <6 ; num ++)
     {
@@ -251,6 +249,22 @@ void loop_task_proc(void *arg)
       if(!gazebo_check)
       {
         rtde_control->servoJ(solutions[1].toStdVector(),0,0,0.002,0.04,100);
+
+        //gazebo_shoulder_pan_position_msg.data = solutions[1].toStdVector()[0];
+        //gazebo_shoulder_lift_position_msg.data = solutions[1].toStdVector()[1];
+        //gazebo_elbow_position_msg.data = solutions[1].toStdVector()[2];
+        //gazebo_wrist_1_position_msg.data = solutions[1].toStdVector()[3];
+        //gazebo_wrist_2_position_msg.data = solutions[1].toStdVector()[4];
+        //gazebo_wrist_3_position_msg.data = solutions[1].toStdVector()[5];
+
+
+        //gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
+        //gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
+        //gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
+        //gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
+        //gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
+        //gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+
       }
       else
       {
@@ -377,8 +391,8 @@ void initialize()
 
   //robot A
   //[-0.45581,0.42951,0.27748,1.037,2.504,-2.504]
-  ur10e_task->set_initial_pose(-0.45581, 0.42951, 0.27748, -0.728808, -1.75982, 1.75982); // set to be robot initial values
-  ur10e_task->set_initial_pose_eaa(-0.45581, 0.42951, 0.27748, -0.728808, -1.75982, 1.75982); // set to be robot initial values
+  ur10e_task->set_initial_pose(-0.6548931267372944, 0.21557220865110965, 0.2596808650645809, -0.7290212721930756, -1.7599986104134355, 1.7600122635046096); // set to be robot initial values
+  ur10e_task->set_initial_pose_eaa(-0.6548931267372944, 0.21557220865110965, 0.2596808650645809, -0.7290212721930756, -1.7599986104134355, 1.7600122635046096); // set to be robot initial values
 
   //robot B
   //ur10e_task->set_initial_pose(-0.5, 0.184324, 0.5875, -180*DEGREE2RADIAN, 0, 0); // set to be robot initial values
@@ -433,12 +447,12 @@ void initialize()
   //  desired_pose_vector[4] = 2.220;
   //  desired_pose_vector[5] = 0.001;
 
-  desired_pose_vector[0] = -0.45581;
-  desired_pose_vector[1] = 0.42951;
-  desired_pose_vector[2] = 0.27748;
-  desired_pose_vector[3] = -0.728808;
-  desired_pose_vector[4] = -1.75982;
-  desired_pose_vector[5] = 1.75982;
+  desired_pose_vector[0] = -0.6548931267372944;
+  desired_pose_vector[1] = 0.21557220865110965;
+  desired_pose_vector[2] = 0.2596808650645809;
+  desired_pose_vector[3] = -0.7290212721930756;
+  desired_pose_vector[4] = -1.7599986104134355;
+  desired_pose_vector[5] = 1.7600122635046096;
 
 
   //robot B
@@ -459,19 +473,19 @@ void initialize()
 
   //gazebo init
   //robot A
-  gazebo_shoulder_pan_position_msg.data = 2.47941;
-  gazebo_shoulder_lift_position_msg.data = -1.85904;
-  gazebo_elbow_position_msg.data = -1.98852;
-  gazebo_wrist_1_position_msg.data = -2.43477;
-  gazebo_wrist_2_position_msg.data = -3.01825;
-  gazebo_wrist_3_position_msg.data = -3.141;
+  gazebo_shoulder_pan_position_msg.data = 2.65787;
+  gazebo_shoulder_lift_position_msg.data = -1.85522;
+  gazebo_elbow_position_msg.data = -2.03556;
+  gazebo_wrist_1_position_msg.data = -2.3924;
+  gazebo_wrist_2_position_msg.data = -2.83993;
+  gazebo_wrist_3_position_msg.data =  -3.14157;
 
-  current_Q[0] = 2.47941;
-  current_Q[1] = -1.85904;
-  current_Q[2] = -1.98852;
-  current_Q[3] = -2.43477;
-  current_Q[4] = -3.01825;
-  current_Q[5] = -3.141;
+  current_Q[0] = 2.65787;
+  current_Q[1] = -1.85522;
+  current_Q[2] = -2.03556;
+  current_Q[3] = -2.3924;
+  current_Q[4] = -2.83993;
+  current_Q[5] =  -3.14157;
 
 
   joint_vel_limits = false;
@@ -574,6 +588,20 @@ int main (int argc, char **argv)
   initialize();
   usleep(3000000);
 
+    gazebo_shoulder_pan_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_pan_position/command", 10);
+    gazebo_shoulder_lift_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_lift_position/command", 10);
+    gazebo_elbow_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/elbow_position/command", 10);
+    gazebo_wrist_1_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_1_position/command", 10);
+    gazebo_wrist_2_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_2_position/command", 10);
+    gazebo_wrist_3_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/wrist_3_position/command", 10);
+
+    gazebo_shoulder_pan_position_pub.publish(gazebo_shoulder_pan_position_msg);
+    gazebo_shoulder_lift_position_pub.publish(gazebo_shoulder_lift_position_msg);
+    gazebo_elbow_position_pub.publish(gazebo_elbow_position_msg);
+    gazebo_wrist_1_position_pub.publish(gazebo_wrist_1_position_msg);
+    gazebo_wrist_2_position_pub.publish(gazebo_wrist_2_position_msg);
+    gazebo_wrist_3_position_pub.publish(gazebo_wrist_3_position_msg);
+
   if(gazebo_check)
   {
     gazebo_shoulder_pan_position_pub = n.advertise<std_msgs::Float64>("/ur10e_robot/shoulder_pan_position/command", 10);
@@ -602,7 +630,7 @@ int main (int argc, char **argv)
     std::cout << COLOR_YELLOW_BOLD << "Robot connected to your program" << COLOR_RESET << std::endl;
     std::cout << COLOR_RED_BOLD << "Robot will move 2 seconds later" << COLOR_RESET << std::endl;
     usleep(2000000);
-    rtde_control->moveL(desired_pose_vector,0.1,0.1); // move to initial pose
+    rtde_control->moveJ(current_Q,0.1,0.1); // move to initial pose
     std::cout << COLOR_RED_BOLD << "Send" << COLOR_RESET << std::endl;
 
     usleep(2000000);
