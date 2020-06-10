@@ -150,8 +150,7 @@ void PidGainCommandMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg
 
 //for ros test
 std::vector<double> desired_pose_vector;
-std::vector<double> tcp_desired_pose_vector;
-std::vector<double> tcp_desired_force_vector;
+std::vector<double> desired_force_torque_vector;
 std::vector<double> compensated_pose_vector;
 
 //task motion

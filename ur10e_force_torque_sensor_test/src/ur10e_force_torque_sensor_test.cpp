@@ -95,6 +95,7 @@ void loop_task_proc(void *arg)
 
     //motion reference
     desired_pose_vector = ur10e_task->get_current_pose();
+    desired_force_torque_vector = ur10e_task->get_desired_force_torque();
 
     if(!gazebo_check)
     {
@@ -122,6 +123,8 @@ void loop_task_proc(void *arg)
         }
       }
 
+      ur10e_task->set_current_pose_eaa(tcp_pose_data[0], tcp_pose_data[1], tcp_pose_data[2], tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5]);
+
       // force torque sensor filtering
       tool_estimation->set_orientation_data(tf_current_matrix);
       //tool_acc_data = tf_current_matrix*tool_acc_data;
@@ -134,7 +137,7 @@ void loop_task_proc(void *arg)
       //force_z_compensator->set_pid_gain(f_kp,f_ki,f_kd);
 
 
-      force_x_compensator->PID_calculate(-4,contacted_force_data(0,0));
+      force_x_compensator->PID_calculate(ur10e_task->get_desired_force_torque()[0],contacted_force_data(0,0));
       //force_y_compensator->PID_calculate(1,contacted_force_data(1,0));
       //force_z_compensator->PID_calculate(1,contacted_force_data(2,0));
 
@@ -187,7 +190,7 @@ void loop_task_proc(void *arg)
       }
     }
 
-    compensated_pose_vector[0] = desired_pose_vector[0] + force_x_compensator->get_final_output();
+    compensated_pose_vector[0] = desired_pose_vector[0]; // + force_x_compensator->get_final_output();
     compensated_pose_vector[1] = desired_pose_vector[1]; //+ force_x_compensator->get_final_output();
     compensated_pose_vector[2] = desired_pose_vector[2]; //+ force_x_compensator->get_final_output();
 
@@ -203,7 +206,8 @@ void loop_task_proc(void *arg)
 
     tf_desired = Transform3D<> (Vector3D<>(compensated_pose_vector[0], compensated_pose_vector[1], compensated_pose_vector[2]),
         EAA<>(compensated_pose_vector[3], compensated_pose_vector[4], compensated_pose_vector[5]).toRotation3D());
-    //
+
+
     std::vector<Q> solutions = solver.solve(tf_desired, state);
 
 
@@ -357,9 +361,9 @@ void initialize()
 
   ur10e_traj = std::make_shared<CalRad>();
   ur10e_task = std::make_shared<TaskMotion>();
-  force_x_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0);
-  force_y_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0);
-  force_z_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0);
+  force_x_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.1, -0.1);
+  force_y_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.1, -0.1);
+  force_z_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.1, -0.1);
 
   //kinematics
   tf_current_matrix.resize(4,4);
@@ -410,14 +414,13 @@ void initialize()
 
   // initial and compensated pose load
   desired_pose_vector.resize(6);
-  tcp_desired_pose_vector.resize(6);
-  tcp_desired_force_vector.resize(3);
+  desired_force_torque_vector.resize(6);
   compensated_pose_vector.resize(6);
 
   for(int num = 0; num < 6; num ++)
   {
     compensated_pose_vector[num] = 0;
-    tcp_desired_pose_vector[num] = 0;
+    desired_force_torque_vector[num] = 0;
   }
 
   // real robot

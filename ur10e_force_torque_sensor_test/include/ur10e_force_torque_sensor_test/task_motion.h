@@ -52,13 +52,15 @@ public:
 
   void clear_task_motion();
 
+
+
   void set_point(double x, double y, double z, double roll, double pitch, double yaw, double time);
   void set_initial_pose(double x, double y, double z, double roll, double pitch, double yaw);
   void set_initial_pose_eaa(double x, double y, double z, double axis_x, double axis_y, double axis_z);
+  void set_current_pose_eaa(double x, double y, double z, double axis_x, double axis_y, double axis_z);
 
   std::vector<double> get_current_pose();
-
-
+  std::vector<double> get_desired_force_torque();
 
 private:
 
@@ -78,18 +80,18 @@ private:
   std::map<int, std::vector<double>> tcp_motion_task_pose_vector;
   std::map<int, std::vector<double>> tcp_motion_desired_force_vector;
 
-
-
   std::vector<double> current_pose_vector;
+  std::vector<double> current_force_torque_vector;
+
   std::shared_ptr<CalRad> robot_traj;
   Eigen::MatrixXd desired_pose_matrix;
 
-  rw::math::Transform3D<> tf_tcp_desired_pose_;
-  rw::math::Transform3D<> tf_tcp_desired_force_;
-  rw::math::Transform3D<> tf_initial_pose_;
-  rw::math::Transform3D<> tf_desired_;
+  Transform3D<> tf_tcp_desired_pose_;
+  Transform3D<> tf_initial_pose_;
+  Transform3D<> tf_current_pose_;
+  Transform3D<> tf_desired_pose_;
 
-
-
+  Wrench6D<> tf_force_desired_;
+  Wrench6D<> tf_tcp_desired_force_;
 };
 #endif /* TASK_MOTION_H_ */
