@@ -268,9 +268,6 @@ void TaskMotion::run_task_motion()
 
     calculate_init_final_velocity(current_point);
 
-    tf_tcp_desired_force_ = Wrench6D<> (tcp_motion_desired_force_vector[current_point][0], tcp_motion_desired_force_vector[current_point][1], tcp_motion_desired_force_vector[current_point][2],
-        tcp_motion_desired_force_vector[current_point][3], tcp_motion_desired_force_vector[current_point][4], tcp_motion_desired_force_vector[current_point][5]);
-
     for(int num = 0; num <6; num ++)
     {
       desired_pose_matrix(num,1) = motion_task_pose_vector[current_point][num];
@@ -293,13 +290,18 @@ void TaskMotion::run_task_motion()
 
   }
 
-  tf_force_desired_ = tf_current_pose_.R()*tf_tcp_desired_force_;
-
-  for(int num = 0; num <3; num ++)
+  if(!base_frame_)
   {
-    current_force_torque_vector[num] = tf_force_desired_.force()[num];
-  }
+    tf_tcp_desired_force_ = Wrench6D<> (tcp_motion_desired_force_vector[current_point][0], tcp_motion_desired_force_vector[current_point][1], tcp_motion_desired_force_vector[current_point][2],
+        tcp_motion_desired_force_vector[current_point][3], tcp_motion_desired_force_vector[current_point][4], tcp_motion_desired_force_vector[current_point][5]);
 
+    tf_force_desired_ = tf_current_pose_.R()*tf_tcp_desired_force_;
+
+    for(int num = 0; num <3; num ++)
+    {
+      current_force_torque_vector[num] = tf_force_desired_.force()[num];
+    }
+  }
   check_change = robot_traj->is_moving_check;
 }
 void TaskMotion::generate_trajectory()
