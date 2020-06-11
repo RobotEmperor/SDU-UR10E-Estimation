@@ -107,6 +107,7 @@ void TaskMotion::load_task_motion(std::string path_)
   }
   temp_motion_task_vel_vector.clear();
 
+  base_frame_ = true;
   std::cout << "LOAD Cmplete" << std::endl;
 }
 void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
@@ -170,7 +171,6 @@ void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
       temp_force_node_vector.push_back(it->second[num].as<double>());
     }
     tcp_motion_desired_force_vector[point_numbers] = temp_force_node_vector;
-    motion_desired_force_vector[point_numbers] = temp_force_node_vector;
     temp_force_node_vector.clear();
   }
 
@@ -201,13 +201,6 @@ void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
     motion_task_pose_vector[num][3] = EAA<> (tf_desired_pose_.R())[0];
     motion_task_pose_vector[num][4] = EAA<> (tf_desired_pose_.R())[1];
     motion_task_pose_vector[num][5] = EAA<> (tf_desired_pose_.R())[2];
-
-    //    std::cout << motion_task_pose_vector[num][0]<< std::endl;
-    //    std::cout << motion_task_pose_vector[num][1]<< std::endl;
-    //    std::cout << motion_task_pose_vector[num][2]<< std::endl;
-    //    std::cout << motion_task_pose_vector[num][3]<< std::endl;
-    //    std::cout << motion_task_pose_vector[num][4]<< std::endl;
-    //    std::cout << motion_task_pose_vector[num][5]<< std::endl;
   }
   //velocity
   for(int num = 0; num < 6; num++)
@@ -220,6 +213,7 @@ void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
   }
   temp_motion_task_vel_vector.clear();
 
+  base_frame_ = false;
   std::cout << "TCP task motion LOAD and Transformation (TCP --> base) Cmplete" << std::endl;
 }
 void TaskMotion::run_task_motion()
@@ -229,13 +223,34 @@ void TaskMotion::run_task_motion()
 
   if(robot_traj->is_moving_check !=true)// not during motion --> can recieve first or new point.
   {
+    static RPY<> tcp_rpy;
+
     if(task_done)
       return;
 
     if(robot_traj->is_moving_check != check_change) // point change is detected.
     {
       current_point ++;
+
       std::cout << current_point << std::endl;
+
+      if(!base_frame_ && current_point <= all_point)
+      {
+        tcp_rpy = RPY<>(tcp_motion_task_pose_vector[current_point][3]*DEGREE2RADIAN,tcp_motion_task_pose_vector[current_point][4]*DEGREE2RADIAN,tcp_motion_task_pose_vector[current_point][5]*DEGREE2RADIAN);
+
+        tf_tcp_desired_pose_ = Transform3D<> (Vector3D<>(tcp_motion_task_pose_vector[current_point][0], tcp_motion_task_pose_vector[current_point][1], tcp_motion_task_pose_vector[current_point][2]),
+            tcp_rpy.toRotation3D());
+
+        tf_desired_pose_ = tf_current_pose_* tf_tcp_desired_pose_;
+
+        motion_task_pose_vector[current_point][0] = Vector3D<> (tf_desired_pose_.P())[0];
+        motion_task_pose_vector[current_point][1] = Vector3D<> (tf_desired_pose_.P())[1];
+        motion_task_pose_vector[current_point][2] = Vector3D<> (tf_desired_pose_.P())[2];
+
+        motion_task_pose_vector[current_point][3] = EAA<> (tf_desired_pose_.R())[0];
+        motion_task_pose_vector[current_point][4] = EAA<> (tf_desired_pose_.R())[1];
+        motion_task_pose_vector[current_point][5] = EAA<> (tf_desired_pose_.R())[2];
+      }
     }
     else
       current_point = 0; //or stop the robot
@@ -256,11 +271,6 @@ void TaskMotion::run_task_motion()
     tf_tcp_desired_force_ = Wrench6D<> (tcp_motion_desired_force_vector[current_point][0], tcp_motion_desired_force_vector[current_point][1], tcp_motion_desired_force_vector[current_point][2],
         tcp_motion_desired_force_vector[current_point][3], tcp_motion_desired_force_vector[current_point][4], tcp_motion_desired_force_vector[current_point][5]);
 
-    //motion_desired_force_vector[num][3] = tf_force_desired_.torque()[0];
-    //motion_desired_force_vector[num][4] = tf_force_desired_.torque()[1];
-    //motion_desired_force_vector[num][5] = tf_force_desired_.torque()[2];
-
-
     for(int num = 0; num <6; num ++)
     {
       desired_pose_matrix(num,1) = motion_task_pose_vector[current_point][num];
@@ -268,9 +278,13 @@ void TaskMotion::run_task_motion()
       desired_pose_matrix(num,2) = motion_task_init_vel_vector[0][num];
       desired_pose_matrix(num,3) = motion_task_final_vel_vector[current_point][num];
 
-      desired_pose_matrix(num,7) = motion_start_time_vector[current_point][0];
+      if(!base_frame_)
+      {
+        desired_pose_matrix(num,2) = 0;
+        desired_pose_matrix(num,3) = 0;
+      }
 
-      //rrent_force_torque_vector[num] = motion_desired_force_vector[current_point][num];
+      desired_pose_matrix(num,7) = motion_start_time_vector[current_point][0];
     }
     // change the point
   }
@@ -280,10 +294,6 @@ void TaskMotion::run_task_motion()
   }
 
   tf_force_desired_ = tf_current_pose_.R()*tf_tcp_desired_force_;
-
-//  motion_desired_force_vector[current_point][0] = tf_force_desired_.force()[0];
-//  motion_desired_force_vector[current_point][1] = tf_force_desired_.force()[1];
-//  motion_desired_force_vector[current_point][2] = tf_force_desired_.force()[2];
 
   for(int num = 0; num <3; num ++)
   {
@@ -358,7 +368,6 @@ void TaskMotion::clear_task_motion()
   current_point = -1;
   motion_start_time_vector.clear();
   motion_task_pose_vector.clear();
-  motion_desired_force_vector.clear();
 }
 
 double TaskMotion::calculate_velocity(double first_point,double second_point, double interval_time)

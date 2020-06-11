@@ -69,16 +69,17 @@ private:
   int current_point;
   bool check_change;
   bool task_done;
+  bool base_frame_;
 
   std::map<int, std::vector<double>> motion_start_time_vector;
   std::map<int, std::vector<double>> motion_task_pose_vector;
-  std::map<int, std::vector<double>> motion_desired_force_vector;
 
   std::map<int, std::vector<double>> motion_task_init_vel_vector;
   std::map<int, std::vector<double>> motion_task_final_vel_vector;
 
   std::map<int, std::vector<double>> tcp_motion_task_pose_vector;
   std::map<int, std::vector<double>> tcp_motion_desired_force_vector;
+
 
   std::vector<double> current_pose_vector;
   std::vector<double> current_force_torque_vector;

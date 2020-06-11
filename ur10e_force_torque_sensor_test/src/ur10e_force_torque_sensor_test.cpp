@@ -80,7 +80,7 @@ void loop_task_proc(void *arg)
     if(sum_count%1500 == 0 && sum_count != 0) // every 3 seconds,
     {
       aver_delayed_time = sum_delayed_time/sum_count;
-      printf("Average delayed time in 5s: %.5f ms\n",aver_delayed_time);
+      printf("Average delayed time in 3s: %.5f ms\n",aver_delayed_time);
       sum_delayed_time = 0;
       sum_count = 0;
     }
@@ -88,7 +88,9 @@ void loop_task_proc(void *arg)
     time_count += 0.002;
     sum_count += 1;
 
-    //controller algorithm
+    //motion controller algorithm
+    ur10e_task->set_current_pose_eaa(compensated_pose_vector[0], compensated_pose_vector[1], compensated_pose_vector[2],compensated_pose_vector[3], compensated_pose_vector[4], compensated_pose_vector[5]);
+
     ur10e_task->run_task_motion();
 
     ur10e_task->generate_trajectory();
@@ -122,8 +124,6 @@ void loop_task_proc(void *arg)
           tf_current_matrix(num_row,num_col) = tf_current(num_row,num_col);
         }
       }
-
-      ur10e_task->set_current_pose_eaa(tcp_pose_data[0], tcp_pose_data[1], tcp_pose_data[2], tcp_pose_data[3], tcp_pose_data[4], tcp_pose_data[5]);
 
       // force torque sensor filtering
       tool_estimation->set_orientation_data(tf_current_matrix);
@@ -197,12 +197,6 @@ void loop_task_proc(void *arg)
     compensated_pose_vector[3] = desired_pose_vector[3]; //+ force_x_compensator->get_final_output();
     compensated_pose_vector[4] = desired_pose_vector[4]; //+ force_x_compensator->get_final_output();
     compensated_pose_vector[5] = desired_pose_vector[5]; //+ force_x_compensator->get_final_output();
-
-    //    if(compensated_pose_vector[0] < -0.43)
-    //      compensated_pose_vector[0] = -0.43;
-    //
-    //    if(compensated_pose_vector[0] > -0.38361)
-    //      compensated_pose_vector[0] = -0.38361;
 
     tf_desired = Transform3D<> (Vector3D<>(compensated_pose_vector[0], compensated_pose_vector[1], compensated_pose_vector[2]),
         EAA<>(compensated_pose_vector[3], compensated_pose_vector[4], compensated_pose_vector[5]).toRotation3D());
@@ -375,9 +369,9 @@ void initialize()
 
   ur10e_traj = std::make_shared<CalRad>();
   ur10e_task = std::make_shared<TaskMotion>();
-  force_x_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.1, -0.1);
-  force_y_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.1, -0.1);
-  force_z_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.1, -0.1);
+  force_x_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.0001, -0.0001);
+  force_y_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.0001, -0.0001);
+  force_z_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.0001, -0.0001);
 
   //kinematics
   tf_current_matrix.resize(4,4);
