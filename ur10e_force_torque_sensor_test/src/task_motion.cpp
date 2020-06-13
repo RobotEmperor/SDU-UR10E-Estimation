@@ -24,8 +24,10 @@ void TaskMotion::initialize(double control_time_)
 
   current_point = -1; // wanna count from 0
   all_point = -1;
+  tcp_all_point = -1;
   check_change = false;
   task_done = false;
+  base_frame_ = true;
 
   desired_pose_matrix.resize(6,8);
   desired_pose_matrix.fill(0);
@@ -47,7 +49,7 @@ void TaskMotion::robot_initialize() // joint space
 {
 
 }
-void TaskMotion::load_task_motion(std::string path_)
+void TaskMotion::load_task_motion(std::string path_, std::string motion_)
 {
   YAML::Node doc; //
   try
@@ -107,9 +109,30 @@ void TaskMotion::load_task_motion(std::string path_)
   }
   temp_motion_task_vel_vector.clear();
 
+  if(!motion_.compare("initialize_belt_task"))
+  {
+    init_belt_task_all_point = all_point;
+    init_belt_motion_start_time_vector = motion_start_time_vector;
+    init_belt_motion_task_pose_vector = motion_task_pose_vector;
+    init_belt_motion_task_init_vel_vector = motion_task_init_vel_vector;
+    init_belt_motion_task_final_vel_vector = motion_task_final_vel_vector;
+    all_point = -1;
+  }
+  else
+  {
+    init_all_point = all_point;
+    init_motion_start_time_vector = motion_start_time_vector;
+    init_motion_task_pose_vector = motion_task_pose_vector;
+    init_motion_task_init_vel_vector = motion_task_init_vel_vector;
+    init_motion_task_final_vel_vector = motion_task_final_vel_vector;
+    all_point = -1;
+  }
+
   base_frame_ = true;
   std::cout << "LOAD Cmplete" << std::endl;
 }
+
+
 void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
 {
   YAML::Node doc; //
@@ -141,7 +164,7 @@ void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
   {
     point_numbers = it->first.as<int>();
     temp_motion_start_time_vector.push_back(it->second[0].as<double>());
-    motion_start_time_vector[point_numbers] = temp_motion_start_time_vector;
+    tcp_motion_start_time_vector[point_numbers] = temp_motion_start_time_vector;
     temp_motion_start_time_vector.clear();
   }
   //points
@@ -157,10 +180,9 @@ void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
       temp_motion_task_pose_vector.push_back(it->second[num].as<double>());
     }
     tcp_motion_task_pose_vector[point_numbers] = temp_motion_task_pose_vector;
-    motion_task_pose_vector[point_numbers] = temp_motion_task_pose_vector;
     temp_motion_task_pose_vector.clear();
 
-    all_point ++;
+    tcp_all_point ++;
   }
   //force
   for (YAML::iterator it = force_node.begin(); it != force_node.end(); ++it)
@@ -173,48 +195,78 @@ void TaskMotion::trans_tcp_to_base_motion(std::string load_path_)
     tcp_motion_desired_force_vector[point_numbers] = temp_force_node_vector;
     temp_force_node_vector.clear();
   }
-
-  //  std::cout << motion_start_time_vector << std::endl;
-  //  std::cout << tcp_motion_task_pose_vector << std::endl;
-  //  std::cout << tcp_motion_desired_force_vector << std::endl;
-
-  //std::map<int, std::vector<double>> base_motion_task_pose_vector;
-  //std::map<int, std::vector<double>> base_motion_desired_force_vector;
-
-  //base_motion_task_pose_vector = tcp_motion_task_pose_vector;
-
-  RPY<> rpy;
-
-  for(int num = 0; num < all_point+1; num ++)
-  {
-    rpy = RPY<>(tcp_motion_task_pose_vector[num][3]*DEGREE2RADIAN,tcp_motion_task_pose_vector[num][4]*DEGREE2RADIAN,tcp_motion_task_pose_vector[num][5]*DEGREE2RADIAN);
-
-    tf_tcp_desired_pose_ = Transform3D<> (Vector3D<>(tcp_motion_task_pose_vector[num][0], tcp_motion_task_pose_vector[num][1], tcp_motion_task_pose_vector[num][2]),
-        rpy.toRotation3D());
-
-    tf_desired_pose_ = tf_initial_pose_* tf_tcp_desired_pose_;
-
-    motion_task_pose_vector[num][0] = Vector3D<> (tf_desired_pose_.P())[0];
-    motion_task_pose_vector[num][1] = Vector3D<> (tf_desired_pose_.P())[1];
-    motion_task_pose_vector[num][2] = Vector3D<> (tf_desired_pose_.P())[2];
-
-    motion_task_pose_vector[num][3] = EAA<> (tf_desired_pose_.R())[0];
-    motion_task_pose_vector[num][4] = EAA<> (tf_desired_pose_.R())[1];
-    motion_task_pose_vector[num][5] = EAA<> (tf_desired_pose_.R())[2];
-  }
-  //velocity
-  for(int num = 0; num < 6; num++)
-    temp_motion_task_vel_vector.push_back(0);
-
-  for(int num = 0; num < all_point+1 ; num++)
-  {
-    motion_task_init_vel_vector[num] = temp_motion_task_vel_vector;
-    motion_task_final_vel_vector[num] = temp_motion_task_vel_vector;
-  }
-  temp_motion_task_vel_vector.clear();
-
-  base_frame_ = false;
   std::cout << "TCP task motion LOAD and Transformation (TCP --> base) Cmplete" << std::endl;
+}
+void TaskMotion::change_motion(std::string motion_)
+{
+  if(!motion_.compare("initialize"))
+  {
+    base_frame_ = true;
+
+    all_point = init_all_point;
+
+    motion_start_time_vector = init_motion_start_time_vector;
+    motion_task_pose_vector  = init_motion_task_pose_vector;
+    motion_task_init_vel_vector = init_motion_task_init_vel_vector;
+    motion_task_final_vel_vector = init_motion_task_final_vel_vector;
+  }
+  if(!motion_.compare("initialize_belt_task"))
+  {
+    base_frame_ = true;
+
+    all_point = init_belt_task_all_point;
+
+    motion_start_time_vector = init_belt_motion_start_time_vector;
+    motion_task_pose_vector  = init_belt_motion_task_pose_vector;
+    motion_task_init_vel_vector = init_belt_motion_task_init_vel_vector;
+    motion_task_final_vel_vector = init_belt_motion_task_final_vel_vector;
+  }
+  if(!motion_.compare("tcp_belt_task"))
+  {
+    all_point = tcp_all_point;
+
+    static std::vector<double> temp_motion_task_vel_vector;
+    static RPY<> rpy;
+    motion_task_pose_vector = tcp_motion_task_pose_vector;
+    motion_start_time_vector = tcp_motion_start_time_vector;
+
+    for(int num = 0; num < all_point+1; num ++)
+    {
+      rpy = RPY<>(tcp_motion_task_pose_vector[num][3]*DEGREE2RADIAN,tcp_motion_task_pose_vector[num][4]*DEGREE2RADIAN,tcp_motion_task_pose_vector[num][5]*DEGREE2RADIAN);
+
+      tf_tcp_desired_pose_ = Transform3D<> (Vector3D<>(tcp_motion_task_pose_vector[num][0], tcp_motion_task_pose_vector[num][1], tcp_motion_task_pose_vector[num][2]),
+          rpy.toRotation3D());
+
+      tf_desired_pose_ = tf_current_pose_* tf_tcp_desired_pose_;
+
+      motion_task_pose_vector[num][0] = Vector3D<> (tf_desired_pose_.P())[0];
+      motion_task_pose_vector[num][1] = Vector3D<> (tf_desired_pose_.P())[1];
+      motion_task_pose_vector[num][2] = Vector3D<> (tf_desired_pose_.P())[2];
+
+      motion_task_pose_vector[num][3] = EAA<> (tf_desired_pose_.R())[0];
+      motion_task_pose_vector[num][4] = EAA<> (tf_desired_pose_.R())[1];
+      motion_task_pose_vector[num][5] = EAA<> (tf_desired_pose_.R())[2];
+    }
+
+
+    //velocity
+    for(int num = 0; num < 6; num++)
+    {
+      temp_motion_task_vel_vector.push_back(0);
+    }
+
+    for(int num = 0; num < all_point+1 ; num++)
+    {
+      motion_task_init_vel_vector[num] = temp_motion_task_vel_vector;
+      motion_task_final_vel_vector[num] = temp_motion_task_vel_vector;
+    }
+    temp_motion_task_vel_vector.clear();
+
+    base_frame_ = false;
+  }
+
+  std::cout << "receive command" << std::endl;
+
 }
 void TaskMotion::run_task_motion()
 {
@@ -236,6 +288,8 @@ void TaskMotion::run_task_motion()
 
       if(!base_frame_ && current_point <= all_point)
       {
+        motion_task_pose_vector = tcp_motion_task_pose_vector;
+
         tcp_rpy = RPY<>(tcp_motion_task_pose_vector[current_point][3]*DEGREE2RADIAN,tcp_motion_task_pose_vector[current_point][4]*DEGREE2RADIAN,tcp_motion_task_pose_vector[current_point][5]*DEGREE2RADIAN);
 
         tf_tcp_desired_pose_ = Transform3D<> (Vector3D<>(tcp_motion_task_pose_vector[current_point][0], tcp_motion_task_pose_vector[current_point][1], tcp_motion_task_pose_vector[current_point][2]),

@@ -58,7 +58,7 @@
 
 
 #define CLOCK_RES 1e-9 //Clock resolution is 1 us by default 1e-9
-#define LOOP_PERIOD 2e6 //Expressed in ticks // 2ms control time
+#define LOOP_PERIOD 5e6 //Expressed in ticks // 2ms control time
 //RTIME period = 1000000000;
 RT_TASK loop_task;
 
@@ -77,9 +77,9 @@ bool gazebo_check;
 ofstream out("test.csv");
 
 //std::shared_ptr<FTfilter> ft_filter;
-std::shared_ptr<ToolEstimation> tool_estimation;
 std::shared_ptr<CalRad> ur10e_traj;
 std::shared_ptr<TaskMotion> ur10e_task;
+std::shared_ptr<ToolEstimation> tool_estimation;
 std::shared_ptr<PID_function> force_x_compensator;
 std::shared_ptr<PID_function> force_y_compensator;
 std::shared_ptr<PID_function> force_z_compensator;
@@ -116,6 +116,9 @@ string getActualToolSpeed;
 string getActualToolAcc;
 
 //ros
+ros::Publisher raw_force_torque_pub;
+ros::Publisher filtered_force_torque_pub;
+
 ros::Publisher gazebo_shoulder_pan_position_pub;
 ros::Publisher gazebo_shoulder_lift_position_pub;
 ros::Publisher gazebo_elbow_position_pub;
@@ -123,6 +126,8 @@ ros::Publisher gazebo_wrist_1_position_pub;
 ros::Publisher gazebo_wrist_2_position_pub;
 ros::Publisher gazebo_wrist_3_position_pub;
 
+std_msgs::Float64MultiArray raw_force_torque_msg;
+std_msgs::Float64MultiArray filtered_force_torque_msg;
 
 std_msgs::Float64 gazebo_shoulder_pan_position_msg;
 std_msgs::Float64 gazebo_shoulder_lift_position_msg;
@@ -145,9 +150,11 @@ std::string task_command;
 
 //tf
 rw::math::Transform3D<> tf_tcp_desired_pose;
-rw::math::Transform3D<> tf_tcp_desired_force;
 rw::math::Transform3D<> tf_current;
 rw::math::Transform3D<> tf_desired;
+
+rw::math::Wrench6D<> current_ft;
+rw::math::Wrench6D<> tf_tcp_current_force;
 
 Eigen::MatrixXd tf_current_matrix;
 

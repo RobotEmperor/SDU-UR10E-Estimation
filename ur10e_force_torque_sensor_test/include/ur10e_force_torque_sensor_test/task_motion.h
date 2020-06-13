@@ -38,7 +38,7 @@ public:
   void initialize(double control_time_);
   void robot_initialize(); // joint space
   void trans_tcp_to_base_motion(std::string load_path_);
-  void load_task_motion(std::string path_);
+  void load_task_motion(std::string path_, std::string motion_);
 
   void run_task_motion();
   void generate_trajectory();
@@ -52,12 +52,15 @@ public:
 
   void clear_task_motion();
 
-
-
   void set_point(double x, double y, double z, double roll, double pitch, double yaw, double time);
   void set_initial_pose(double x, double y, double z, double roll, double pitch, double yaw);
   void set_initial_pose_eaa(double x, double y, double z, double axis_x, double axis_y, double axis_z);
   void set_current_pose_eaa(double x, double y, double z, double axis_x, double axis_y, double axis_z);
+
+  void load_data_initialize();
+  void load_data_tcp_motion();
+
+  void change_motion(std::string motion_);
 
   std::vector<double> get_current_pose();
   std::vector<double> get_desired_force_torque();
@@ -66,18 +69,42 @@ private:
 
   int number_of_point;
   int all_point;
+  int init_all_point;
+  int init_belt_task_all_point;
+  int tcp_all_point;
+
   int current_point;
   bool check_change;
   bool task_done;
   bool base_frame_;
 
+  //
   std::map<int, std::vector<double>> motion_start_time_vector;
   std::map<int, std::vector<double>> motion_task_pose_vector;
-
   std::map<int, std::vector<double>> motion_task_init_vel_vector;
   std::map<int, std::vector<double>> motion_task_final_vel_vector;
 
+  //
+  std::map<int, std::vector<double>> init_motion_start_time_vector;
+  std::map<int, std::vector<double>> init_motion_task_pose_vector;
+  std::map<int, std::vector<double>> init_motion_task_init_vel_vector;
+  std::map<int, std::vector<double>> init_motion_task_final_vel_vector;
+
+  //init belt
+  std::map<int, std::vector<double>> init_belt_motion_start_time_vector;
+  std::map<int, std::vector<double>> init_belt_motion_task_pose_vector;
+  std::map<int, std::vector<double>> init_belt_motion_task_init_vel_vector;
+  std::map<int, std::vector<double>> init_belt_motion_task_final_vel_vector;
+
+
+  //tcp
+  std::map<int, std::vector<double>> tcp_motion_start_time_vector;
   std::map<int, std::vector<double>> tcp_motion_task_pose_vector;
+
+  std::map<int, std::vector<double>> tcp_motion_task_init_vel_vector;
+  std::map<int, std::vector<double>> tcp_motion_task_final_vel_vector;
+
+  //tcp force
   std::map<int, std::vector<double>> tcp_motion_desired_force_vector;
 
 

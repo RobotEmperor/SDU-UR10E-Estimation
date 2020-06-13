@@ -85,14 +85,12 @@ void loop_task_proc(void *arg)
       sum_count = 0;
     }
     previous_t = (rt_timer_read() - tstart)/1000000.0;
-    time_count += 0.002;
+    time_count += 0.005;
     sum_count += 1;
 
     //motion controller algorithm
     ur10e_task->set_current_pose_eaa(compensated_pose_vector[0], compensated_pose_vector[1], compensated_pose_vector[2],compensated_pose_vector[3], compensated_pose_vector[4], compensated_pose_vector[5]);
-
     ur10e_task->run_task_motion();
-
     ur10e_task->generate_trajectory();
 
     //motion reference
@@ -132,21 +130,33 @@ void loop_task_proc(void *arg)
 
       ////controller for force compensation
 
-      force_x_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+      if(ur10e_task->get_desired_force_torque()[0] == 0 && ur10e_task->get_desired_force_torque()[1] == 0 && ur10e_task->get_desired_force_torque()[2] == 0)
+      {
+        force_x_compensator->set_pid_gain(0,0,0);
+        force_y_compensator->set_pid_gain(0,0,0);
+
+      }
+      else
+      {
+        force_x_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+        force_y_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+      }
       //force_y_compensator->set_pid_gain(f_kp,f_ki,f_kd);
       //force_z_compensator->set_pid_gain(f_kp,f_ki,f_kd);
 
-
       force_x_compensator->PID_calculate(ur10e_task->get_desired_force_torque()[0],contacted_force_data(0,0));
-      //force_y_compensator->PID_calculate(1,contacted_force_data(1,0));
+      force_y_compensator->PID_calculate(ur10e_task->get_desired_force_torque()[1],contacted_force_data(1,0));
       //force_z_compensator->PID_calculate(1,contacted_force_data(2,0));
+
+      current_ft = Wrench6D<> (contacted_force_data(0,0), contacted_force_data(1,0), contacted_force_data(2,0), contacted_force_data(3,0), contacted_force_data(4,0), contacted_force_data(5,0));
+
+      tf_tcp_current_force = (tf_current.R()).inverse()*current_ft;
 
       //data recording
       for(int num = 0; num<6; num++)
       {
         getActualTCPForce += " "+to_string(raw_force_torque_data(num,0));
         getFilteredForce += " "+to_string(contacted_force_data(num,0));
-        getContactedForceTorque += " "+to_string(contacted_force_data(num,0));
         getActualQ +=" "+to_string(joint_positions[num]);
       }
       for(int num = 0; num<3; num++)
@@ -156,22 +166,35 @@ void loop_task_proc(void *arg)
         getActualTCPPose += " "+to_string(tcp_pose(num,0));
         getActualToolSpeed +=" "+to_string(0);
         getActualToolAcc +=" "+to_string(0);
+        getContactedForceTorque += " "+to_string(tf_tcp_current_force.force()[num]);
 
       }
       for(int num = 0; num<3; num++)
       {
         getActualTCPPose += " "+to_string(tcp_pose(num+3,0));
         getTargetTCPPose += " "+to_string(0);
+        getContactedForceTorque += " "+to_string(tf_tcp_current_force.torque()[num]);
       }
     }
-
-    compensated_pose_vector[0] = desired_pose_vector[0]; // + force_x_compensator->get_final_output();
-    compensated_pose_vector[1] = desired_pose_vector[1]; //+ force_x_compensator->get_final_output();
+    compensated_pose_vector[0] = desired_pose_vector[0] + force_x_compensator->get_final_output();
+    compensated_pose_vector[1] = desired_pose_vector[1] + force_y_compensator->get_final_output();
     compensated_pose_vector[2] = desired_pose_vector[2]; //+ force_x_compensator->get_final_output();
 
     compensated_pose_vector[3] = desired_pose_vector[3]; //+ force_x_compensator->get_final_output();
     compensated_pose_vector[4] = desired_pose_vector[4]; //+ force_x_compensator->get_final_output();
     compensated_pose_vector[5] = desired_pose_vector[5]; //+ force_x_compensator->get_final_output();
+
+
+    filtered_force_torque_msg.data.push_back(contacted_force_data(0,0));
+    filtered_force_torque_msg.data.push_back(contacted_force_data(1,0));
+    filtered_force_torque_msg.data.push_back(contacted_force_data(2,0));
+
+    filtered_force_torque_msg.data.push_back(force_x_compensator->get_final_output());
+    filtered_force_torque_msg.data.push_back(force_y_compensator->get_final_output());
+    filtered_force_torque_msg.data.push_back(tf_tcp_current_force.force()[0]);
+
+    filtered_force_torque_pub.publish(filtered_force_torque_msg);
+    filtered_force_torque_msg.data.clear();
 
     tf_desired = Transform3D<> (Vector3D<>(compensated_pose_vector[0], compensated_pose_vector[1], compensated_pose_vector[2]),
         EAA<>(compensated_pose_vector[3], compensated_pose_vector[4], compensated_pose_vector[5]).toRotation3D());
@@ -209,7 +232,7 @@ void loop_task_proc(void *arg)
       {
         cout << "::" << num << "::" << fabs((solutions[1].toStdVector()[num] - current_Q[num])/control_time) << endl;
         std::cout << COLOR_RED_BOLD << "Robot speed is so FAST" << COLOR_RESET << std::endl;
-        //joint_vel_limits = true;
+        joint_vel_limits = true;
       }
     }
 
@@ -284,22 +307,9 @@ void CommandDataMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg)
 }
 void TaskCommandDataMsgCallBack (const std_msgs::String::ConstPtr& msg)
 {
-  static std::string path_ = "";
   task_command = msg->data;
-
   ur10e_task->clear_task_motion();
-
-  path_ = "/home/yik/sdu_ws/SDU-UR10E-Estimation/config/" + task_command + ".yaml";
-
-  if(!task_command.compare("initialize") || !task_command.compare("initialize_belt_task"))
-  {
-    ur10e_task->load_task_motion(path_);
-  }
-  else
-  {
-    ur10e_task->set_initial_pose_eaa(desired_pose_vector[0], desired_pose_vector[1], desired_pose_vector[2], desired_pose_vector[3], desired_pose_vector[4], desired_pose_vector[5]); // set to be robot initial values
-    ur10e_task->trans_tcp_to_base_motion(path_);
-  }
+  ur10e_task->change_motion(task_command);
 }
 void PidGainCommandMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg)
 {
@@ -323,31 +333,31 @@ void PidGainCommandMsgCallBack (const std_msgs::Float64MultiArray::ConstPtr& msg
 }
 void initialize()
 {
-  control_time = 0.002;
+  control_time = 0.005;
   tool_estimation = std::make_shared<ToolEstimation>();
 
   ur10e_traj = std::make_shared<CalRad>();
   ur10e_task = std::make_shared<TaskMotion>();
-  force_x_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.0001, -0.0001);
-  force_y_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.0001, -0.0001);
-  force_z_compensator = std::make_shared<PID_function>(control_time, 0.02, -0.02, 0, 0, 0, 0.0001, -0.0001);
+  force_x_compensator = std::make_shared<PID_function>(control_time, 0.0025, -0.0025, 0, 0, 0, 0.00001, -0.00001);
+  force_y_compensator = std::make_shared<PID_function>(control_time, 0.0025, -0.0025, 0, 0, 0, 0.00001, -0.00001);
+  force_z_compensator = std::make_shared<PID_function>(control_time, 0.0025, -0.0025, 0, 0, 0, 0.00001, -0.00001);
 
-//  Transform3D<> tf_base_to_bearing;
-//  Transform3D<> tf_bearing_to_init;
-//  //Transform3D<> tf_bearing_to_fixture;
-//  Transform3D<> tf_bearing_to_bearing2;
-//
-//  Transform3D<> tf_base_to_init;
-//  Transform3D<> tf_base_to_fixture;
-//
-//  tf_base_to_bearing = Transform3D<> (Vector3D<>(-0.739757210413974, 0.07993900394775277, 0.2449995438351456), EAA<>(-0.7217029684216122, -1.7591780460014375, 1.7685571865188172).toRotation3D());
-//  tf_bearing_to_init = Transform3D<> (Vector3D<>(0, 0, -0.05), EAA<>(0, 0, 0).toRotation3D());
-//  //tf_bearing_to_fixture = Transform3D<> (Vector3D<>(-0.05, -0.255, 0.04215), EAA<>(0, 0, 0).toRotation3D());
-//  //tf_bearing_to_bearing2 = Transform3D<> (Vector3D<>(0, -0.13, 0), EAA<>(0, 0, 0).toRotation3D());
-//
-//  tf_base_to_init = tf_base_to_bearing*tf_bearing_to_init;
-//
-//  cout << tf_base_to_init << endl;
+  Transform3D<> tf_base_to_bearing;
+  Transform3D<> tf_bearing_to_init;
+  //Transform3D<> tf_bearing_to_fixture;
+  Transform3D<> tf_bearing_to_bearing2;
+
+  Transform3D<> tf_base_to_init;
+  Transform3D<> tf_base_to_fixture;
+
+  tf_base_to_bearing = Transform3D<> (Vector3D<>(-0.739757210413974, 0.07993900394775277, 0.2449995438351456), EAA<>(-0.7217029684216122, -1.7591780460014375, 1.7685571865188172).toRotation3D());
+  tf_bearing_to_init = Transform3D<> (Vector3D<>(-0.155, 0, -0.025), EAA<>(0, 0, 0).toRotation3D());
+  //tf_bearing_to_fixture = Transform3D<> (Vector3D<>(-0.05, -0.255, 0.04215), EAA<>(0, 0, 0).toRotation3D());
+  //tf_bearing_to_bearing2 = Transform3D<> (Vector3D<>(0, -0.13, 0), EAA<>(0, 0, 0).toRotation3D());
+
+  tf_base_to_init = tf_base_to_bearing*tf_bearing_to_init;
+
+  cout << tf_base_to_init << endl;
 
   //kinematics
   tf_current_matrix.resize(4,4);
@@ -445,22 +455,30 @@ void initialize()
 
   //gazebo init
   //robot A
-  gazebo_shoulder_pan_position_msg.data = 2.65787;
-  gazebo_shoulder_lift_position_msg.data = -1.85522;
-  gazebo_elbow_position_msg.data = -2.03761;
-  gazebo_wrist_1_position_msg.data = -2.3872;
-  gazebo_wrist_2_position_msg.data = -2.83993;
-  gazebo_wrist_3_position_msg.data =  -3.137;
+  gazebo_shoulder_pan_position_msg.data =  2.6559;
+  gazebo_shoulder_lift_position_msg.data = -1.85396;
+  gazebo_elbow_position_msg.data = -2.03763;
+  gazebo_wrist_1_position_msg.data = -2.38718;
+  gazebo_wrist_2_position_msg.data = -2.84058;
+  gazebo_wrist_3_position_msg.data =  -3.13698;
 
-  current_Q[0] = 2.65787;
-  current_Q[1] = -1.85522;
-  current_Q[2] = -2.03761;
-  current_Q[3] = -2.3872;
-  current_Q[4] = -2.83993;
-  current_Q[5] = -3.137;
-
+  current_Q[0] = 2.6559;
+  current_Q[1] = -1.85396;
+  current_Q[2] = -2.03763;
+  current_Q[3] = -2.38718;
+  current_Q[4] = -2.84058;
+  current_Q[5] = -3.13698;
 
   joint_vel_limits = false;
+
+  //load motion data
+  std::string path_ = "/home/yik/sdu_ws/SDU-UR10E-Estimation/config/initialize_belt_task.yaml";
+  ur10e_task->load_task_motion(path_,"initialize_belt_task");
+  path_ = "/home/yik/sdu_ws/SDU-UR10E-Estimation/config/initialize.yaml";
+  ur10e_task->load_task_motion(path_,"initialize");
+  path_ = "/home/yik/sdu_ws/SDU-UR10E-Estimation/config/tcp_belt_task.yaml";
+  ur10e_task->set_initial_pose_eaa(-0.594295, 0.00668736, 0.244747, -0.7290212721930756, -1.7599986104134355, 1.7600122635046096); // set to be robot initial values
+  ur10e_task->trans_tcp_to_base_motion(path_);
 
 
   //initial position
@@ -485,15 +503,15 @@ void initialize()
   //  gazebo_wrist_3_position_msg.data = 1.5505226962847685;
 
   //data variables define
-  getTargetTCPPose = " target_tcp_pose_x target_tcp_pose_y target_tcp_pose_z target_tcp_pose_r target_tcp_pose_p target_tcp_pose_y";
-  getActualTCPPose = " actual_tcp_pose_x actual_tcp_pose_y actual_tcp_pose_z actual_tcp_pose_r actual_tcp_pose_p actual_tcp_pose_y";
-  getActualTCPForce = " actual_tcp_force_x actual_tcp_force_y actual_tcp_force_z actual_tcp_force_r actual_tcp_force_p actual_tcp_force_y";
-  getFilteredForce = " filtered_force_x filtered_force_y filtered_force_z filtered_torque_r filtered_torque_p filtered_torque_y";
-  getContactedForceTorque = " contacted_force_x contacted_force_y contacted_force_z contacted_torque_r contacted_torque_p contacted_torque_y";
+  getTargetTCPPose = " target_tcp_pose_x target_tcp_pose_y target_tcp_pose_z target_tcp_pose_eaa_x target_tcp_pose_eaa_y target_tcp_pose_eaa_z";
+  getActualTCPPose = " actual_tcp_pose_x actual_tcp_pose_y actual_tcp_pose_z actual_tcp_pose_eaa_x actual_tcp_pose_eaa_y actual_tcp_pose_eaa_z";
+  getActualTCPForce = " actual_force_x actual_force_y actual_force_z actual_torque_x actual_torque_x actual_torque_x";
+  getFilteredForce = " filtered_force_x filtered_force_y filtered_force_z filtered_torque_x filtered_torque_y filtered_torque_z";
+  getContactedForceTorque = " tcp_contacted_force_x tcp_contacted_force_y tcp_contacted_force_z tcp_contacted_torque_x tcp_contacted_torque_y tcp_contacted_torque_z";
   getActualToolAccelerometer = " actual_tcp_acc_x actual_tcp_acc_y actual_tcp_acc_z";
   getActualToolSpeed = " actual_tcp_speed_r actual_tcp_speed_p actual_tcp_speed_y";
   getActualToolAcc = " actual_tcp_acc_r actual_tcp_acc_p actual_tcp_acc_y";
-  getActualQ = " actual_q_x actual_q_y actual_q_z";
+  getActualQ = " actual_q_0 actual_q_1 actual_q_2 actual_q_3 actual_q_4 actual_q_5";
 
   data_line = "time"+getTargetTCPPose+getActualTCPPose+getActualTCPForce+getFilteredForce+getContactedForceTorque+
       getActualToolAccelerometer+getActualToolSpeed+getActualToolAcc+getActualQ+"\n";
@@ -536,10 +554,11 @@ int main (int argc, char **argv)
   }
 
   std::cout << COLOR_GREEN_BOLD << "Program Start:" << COLOR_RESET << std::endl;
-  ros::init(argc, argv, "talker");
+  ros::init(argc, argv, "WRS_Belt_Task");
   ros::NodeHandle n;
 
   //ros publisher
+  filtered_force_torque_pub = n.advertise<std_msgs::Float64MultiArray>("/sdu/ur10e/filtered_force_torque_data", 10);
 
   // ros subsrcibe
   ros::Subscriber command_sub;
