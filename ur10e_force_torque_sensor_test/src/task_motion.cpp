@@ -312,7 +312,7 @@ void TaskMotion::run_task_motion()
     if(current_point > all_point)
     {
       check_change = robot_traj->is_moving_check;
-      current_force_torque_vector = {0, 0, 0, 0, 0, 0};
+      //current_force_torque_vector = {0, 0, 0, 0, 0, 0};
       task_done = true;
       return;
     }

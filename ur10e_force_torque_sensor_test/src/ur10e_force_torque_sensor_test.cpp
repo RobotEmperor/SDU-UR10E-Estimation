@@ -130,19 +130,21 @@ void loop_task_proc(void *arg)
 
       ////controller for force compensation
 
-      if(ur10e_task->get_desired_force_torque()[0] == 0 && ur10e_task->get_desired_force_torque()[1] == 0 && ur10e_task->get_desired_force_torque()[2] == 0)
-      {
-        force_x_compensator->set_pid_gain(0,0,0);
-        force_y_compensator->set_pid_gain(0,0,0);
+//      if(ur10e_task->get_desired_force_torque()[0] == 0 && ur10e_task->get_desired_force_torque()[1] == 0 && ur10e_task->get_desired_force_torque()[2] == 0)
+//      {
+//        force_x_compensator->set_pid_gain(0,0,0);
+//        force_y_compensator->set_pid_gain(0,0,0);
+//
+//      }
+//      else
+//      {
+//        force_x_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+//        force_y_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+//      }
 
-      }
-      else
-      {
-        force_x_compensator->set_pid_gain(f_kp,f_ki,f_kd);
-        force_y_compensator->set_pid_gain(f_kp,f_ki,f_kd);
-      }
-      //force_y_compensator->set_pid_gain(f_kp,f_ki,f_kd);
-      //force_z_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+      force_x_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+      force_y_compensator->set_pid_gain(f_kp,f_ki,f_kd);
+      force_z_compensator->set_pid_gain(f_kp,f_ki,f_kd);
 
       force_x_compensator->PID_calculate(ur10e_task->get_desired_force_torque()[0],contacted_force_data(0,0));
       force_y_compensator->PID_calculate(ur10e_task->get_desired_force_torque()[1],contacted_force_data(1,0));
@@ -192,6 +194,9 @@ void loop_task_proc(void *arg)
     filtered_force_torque_msg.data.push_back(force_x_compensator->get_final_output());
     filtered_force_torque_msg.data.push_back(force_y_compensator->get_final_output());
     filtered_force_torque_msg.data.push_back(tf_tcp_current_force.force()[0]);
+
+    filtered_force_torque_msg.data.push_back(tf_tcp_current_force.force()[1]);
+    filtered_force_torque_msg.data.push_back(tf_tcp_current_force.force()[2]);
 
     filtered_force_torque_pub.publish(filtered_force_torque_msg);
     filtered_force_torque_msg.data.clear();
